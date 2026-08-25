@@ -32,7 +32,7 @@ async function bootstrap() {
 	)
 
 	app.enableCors({
-		origin: (origin: any, callback: any) => {
+		origin: (origin: string, callback: any) => {
 			if (!origin) return callback(null, true)
 
 			const allowedOrigins = env.get('CORS_ORIGINS').split(',')
@@ -94,9 +94,11 @@ async function bootstrap() {
 	app.use(
 		'/reference',
 		apiReference({
+			title: 'Marketplace API Gateway',
 			url: '/reference/openapi.json',
 			theme: 'elysiajs',
-			layout: 'modern',
+			layout: 'classic',
+			darkMode: true,
 		}),
 	)
 

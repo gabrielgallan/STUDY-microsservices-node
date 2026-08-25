@@ -3,6 +3,8 @@ import { Injectable, UnauthorizedException } from '@nestjs/common'
 import { JwtService } from '@nestjs/jwt'
 import { firstValueFrom } from 'rxjs'
 import { serviceConfig } from '../../config/gateway.config'
+import { LoginDto } from '../controllers/dtos/login.dto'
+import { RegisterDto } from '../controllers/dtos/register.dto'
 
 export interface UserSession {
 	valid: boolean
@@ -16,6 +18,18 @@ export interface UserSession {
 	} | null
 }
 
+interface AuthResponse {
+	accessToken: string
+	user: {
+		id: string
+		email: string
+		role: string
+		firstName: string
+		lastName: string
+		status: string
+	}
+}
+
 @Injectable()
 export class AuthService {
 	constructor(
@@ -23,7 +37,7 @@ export class AuthService {
 		private httpService: HttpService,
 	) {}
 
-	async validateJwtToken(token: string): Promise<any> {
+	async validateJwtToken(token: any): Promise<AuthResponse> {
 		try {
 			return this.jwtService.verify(token)
 		} catch {
@@ -47,6 +61,30 @@ export class AuthService {
 			throw new UnauthorizedException('Invalid session token')
 		}
 	}
-	async login() {}
-	async register() {}
+	async login(loginDto: LoginDto): Promise<AuthResponse> {
+		try {
+			const { data } = await firstValueFrom(
+				this.httpService.post(`${serviceConfig.users.url}/login`, loginDto, {
+					timeout: serviceConfig.users.timeout,
+				}),
+			)
+
+			return data
+		} catch {
+			throw new UnauthorizedException('Invalid credentials')
+		}
+	}
+	async register(registerDto: RegisterDto): Promise<AuthResponse> {
+		try {
+			const { data } = await firstValueFrom(
+				this.httpService.post(`${serviceConfig.users.url}/register`, registerDto, {
+					timeout: serviceConfig.users.timeout,
+				}),
+			)
+
+			return data
+		} catch {
+			throw new UnauthorizedException('Registration failed')
+		}
+	}
 }

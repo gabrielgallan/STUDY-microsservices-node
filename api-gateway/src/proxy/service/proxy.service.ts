@@ -1,7 +1,10 @@
 import { HttpService } from '@nestjs/axios'
 import { Injectable, Logger } from '@nestjs/common'
 import { firstValueFrom } from 'rxjs'
+import { UserPayload } from '../../auth/strategies/jwt.strategy'
 import { serviceConfig } from '../../config/gateway.config'
+
+type HttpMethod = 'get' | 'post' | 'put' | 'delete' | 'patch'
 
 @Injectable()
 export class ProxyService {
@@ -11,11 +14,11 @@ export class ProxyService {
 
 	async proxyRequest(
 		serviceName: keyof typeof serviceConfig,
-		method: string,
+		method: HttpMethod,
 		path: string,
-		data?: any,
-		headers?: any,
-		userInfo?: any,
+		data?: unknown,
+		headers?: Record<string, string>,
+		userInfo?: UserPayload,
 	) {
 		const service = serviceConfig[serviceName]
 
@@ -64,8 +67,11 @@ export class ProxyService {
 			)
 
 			return { status: 'healthy', data: response.data }
-		} catch (error: any) {
-			return { status: 'unhealthy', error: error?.message }
+		} catch (error: unknown) {
+			return {
+				status: 'unhealthy',
+				error: error instanceof Error ? error.message : 'Unknown error',
+			}
 		}
 	}
 }

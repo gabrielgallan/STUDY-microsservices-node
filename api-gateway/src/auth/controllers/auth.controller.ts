@@ -1,15 +1,17 @@
 import { Body, Controller, HttpCode, Post } from '@nestjs/common'
 import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger'
-import { Throttle } from '@nestjs/throttler';
-import { Public } from '../decorators/public.decorator';
-import { LoginDto } from './dtos/login.dto';
-import { RegisterDto } from './dtos/register.dto';
+import { Throttle } from '@nestjs/throttler'
+import { Public } from '../decorators/public.decorator'
+import { AuthService } from '../services/auth.service'
+import { LoginDto } from './dtos/login.dto'
+import { RegisterDto } from './dtos/register.dto'
 
 @ApiTags('Authentication')
 @Controller('/api/auth')
 export class AuthController {
+    constructor(private authService: AuthService) {}
 
-    @ApiOperation({  summary: 'User login' })
+    @ApiOperation({ summary: 'User login' })
     @ApiResponse({ status: 200, description: 'User logged in successfully' })
     @ApiResponse({ status: 400, description: 'Invalid data' })
     @Post('login')
@@ -17,7 +19,7 @@ export class AuthController {
     @Public()
     @Throttle({ short: { limit: 5, ttl: 60000 } })
     async login(@Body() loginDto: LoginDto) {
-        // Implementation for login
+        return this.authService.login(loginDto)
     }
     
     @ApiOperation({ summary: 'User registration' })
@@ -28,6 +30,6 @@ export class AuthController {
     @Public()
     @Throttle({ medium: { limit: 3, ttl: 60000 } })
     async register(@Body() registerDto: RegisterDto) {
-        // Implementation for registration
+        return this.authService.register(registerDto);
     }
 }
