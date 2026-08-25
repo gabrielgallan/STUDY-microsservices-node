@@ -94,11 +94,9 @@ async function bootstrap() {
 	app.use(
 		'/reference',
 		apiReference({
-			title: 'Marketplace API Gateway',
 			url: '/reference/openapi.json',
 			theme: 'elysiajs',
-			layout: 'classic',
-			darkMode: true,
+			layout: 'modern',
 		}),
 	)
 
