@@ -4,11 +4,14 @@ import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger'
 import { apiReference } from '@scalar/nestjs-api-reference'
 import helmet from 'helmet'
 import { AppModule } from './app.module'
+import { EnvService } from './env/env.service'
 
 async function bootstrap() {
 	const app = await NestFactory.create(AppModule, {
 		logger: ['error', 'log', 'warn', 'verbose', 'debug'],
 	})
+
+	const env = app.get(EnvService)
 
 	app.use(
 		helmet({
@@ -32,7 +35,7 @@ async function bootstrap() {
 		origin: (origin: any, callback: any) => {
 			if (!origin) return callback(null, true)
 
-			const allowedOrigins = process.env.CORS_ORIGINS?.split(',') || ['*']
+			const allowedOrigins = env.get('CORS_ORIGINS').split(',')
 
 			if (allowedOrigins.includes(origin)) {
 				callback(null, true)
@@ -55,15 +58,36 @@ async function bootstrap() {
 	})
 
 	const config = new DocumentBuilder()
-		.setTitle('Microservices API Gateway')
+		.setTitle('Marketplace API Gateway')
+		.setDescription('API Gateway for the Marketplace microservices architecture')
 		.setVersion('1.0')
+		.setLicense('MIT', 'https://opensource.org/licenses/MIT')
+		.addBearerAuth({
+			type: 'http',
+			scheme: 'bearer',
+			bearerFormat: 'JWT',
+			name: 'JWT',
+			description: 'Enter JWT token',
+			in: 'header',
+		})
+		.addApiKey({
+			type: 'apiKey',
+			name: 'x-session-token',
+			in: 'header',
+			description: 'Enter session token',
+		})
+		.addTag('Authentication', 'Operations related to authentication')
+		.addTag('Users', 'Operations related to users')
+		.addTag('Products', 'Operations related to products')
+		.addTag('Checkout', 'Operations related to checkout')
+		.addTag('Payments', 'Operations related to payments')
 		.build()
 
 	const document = SwaggerModule.createDocument(app, config)
 
 	const httpAdapter = app.getHttpAdapter()
 
-	httpAdapter.get('/reference/openapi.json', (_req, res) => {
+	httpAdapter.get('/reference/openapi.json', (_, res) => {
 		res.json(document)
 	})
 
@@ -86,7 +110,7 @@ async function bootstrap() {
 		}),
 	)
 
-	const port = process.env.PORT || 3000
+	const port = env.get('PORT')
 
 	app
 		.listen(port)
@@ -96,9 +120,9 @@ async function bootstrap() {
 			process.exit(1)
 		})
 		.finally(() => {
-			logger.verbose(`HTTP server running on port ${port}`)
-			logger.verbose(`API documentation can be found on /reference`)
-			logger.verbose(`API openapi.json can be found on /reference/openapi.json`)
+			logger.log(`HTTP server running on port ${port}`)
+			logger.log(`API reference can be found on /reference`)
+			logger.log(`API openapi.json can be found on /reference/openapi.json`)
 		})
 }
 bootstrap()
