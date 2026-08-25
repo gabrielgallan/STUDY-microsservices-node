@@ -55,7 +55,7 @@ async function bootstrap() {
 	})
 
 	const config = new DocumentBuilder()
-		.setTitle('task_manager API')
+		.setTitle('Microservices API Gateway')
 		.setVersion('1.0')
 		.build()
 
