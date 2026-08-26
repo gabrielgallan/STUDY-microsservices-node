@@ -3,9 +3,6 @@ import { ConfigModule } from '@nestjs/config'
 import { APP_GUARD } from '@nestjs/core'
 import { ThrottlerModule } from '@nestjs/throttler'
 import { AuthModule } from './auth/auth.module'
-import { CircuitBreakerModule } from './common/circuit-breaker/circuit-breaker.module'
-import { FallbackModule } from './common/fallback/fallback.module'
-import { HealthCheckModule } from './common/health/health-check.module'
 import { HealthModule } from './controllers/health.module'
 import { envSchema } from './env/env'
 import { EnvModule } from './env/env.module'
@@ -47,9 +44,6 @@ import { ProxyModule } from './proxy/proxy.module'
 		ProxyModule,
 		MiddlewareModule,
 		HealthModule,
-		HealthCheckModule,
-		FallbackModule,
-		CircuitBreakerModule,
 	],
 	providers: [
 		{

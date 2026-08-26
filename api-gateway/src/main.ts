@@ -120,9 +120,11 @@ async function bootstrap() {
 			process.exit(1)
 		})
 		.finally(() => {
-			logger.log(`HTTP server running on port ${port}`)
-			logger.log(`API reference can be found on /reference`)
-			logger.log(`API openapi.json can be found on /reference/openapi.json`)
+			logger.log(`HTTP server running on http://localhost:${port}`)
+			logger.log(`API reference can be found on http://localhost:${port}/reference`)
+			logger.log(
+				`API openapi.json can be found on http://localhost:${port}/reference/openapi.json`,
+			)
 		})
 }
 bootstrap()

@@ -5,6 +5,8 @@ import { UserPayload } from '../../auth/strategies/jwt.strategy'
 import { CircuitBreakerService } from '../../common/circuit-breaker/circuit-breaker.service'
 import { CacheFallbackService } from '../../common/fallback/cache-fallback.service'
 import { DefaultFallbackService } from '../../common/fallback/default-fallback.service'
+import { RetryService } from '../../common/retry/retry.service'
+import { TimeoutService } from '../../common/timeout/timeout.service'
 import { serviceConfig } from '../../config/gateway.config'
 
 type HttpMethod = 'get' | 'post' | 'put' | 'delete' | 'patch'
@@ -18,6 +20,8 @@ export class ProxyService {
 		private circuitBreakerService: CircuitBreakerService,
 		private defaultFallbackService: DefaultFallbackService,
 		private cacheFallbackService: CacheFallbackService,
+		private timeoutService: TimeoutService,
+		private retryService: RetryService,
 	) {}
 
 	async proxyRequest(
@@ -36,59 +40,45 @@ export class ProxyService {
 
 		const fallback = this.createServiceFallback(serviceName, method, path)
 
-		return this.circuitBreakerService.executeWithCircuitBreaker(
+		// Layer 1: Circuit Breaker
+		return await this.circuitBreakerService.executeWithCircuitBreaker(
 			async () => {
-				const enhancedHeaders = {
-					...headers,
-					'x-user-id': userInfo?.userId,
-					'x-user-email': userInfo?.email,
-					'x-user-role': userInfo?.role,
-				}
+				// Layer 2: Retry
+				return await this.retryService.executeWithExponentialBackoff(async () => {
+					// Layer 3: Timeout
+					return await this.timeoutService.executeWithCustomTimeout(async () => {
+						const enhancedHeaders = {
+							...headers,
+							'x-user-id': userInfo?.userId,
+							'x-user-email': userInfo?.email,
+							'x-user-role': userInfo?.role,
+						}
 
-				const response = await firstValueFrom(
-					this.httpServer.request({
-						method: method.toLowerCase(),
-						url,
-						data,
-						headers: enhancedHeaders,
-						timeout: service.timeout,
-					}),
-				)
+						const response = await firstValueFrom(
+							this.httpServer.request({
+								method: method.toLowerCase(),
+								url,
+								data,
+								headers: enhancedHeaders,
+								timeout: service.timeout,
+							}),
+						)
 
-				if (method.toLowerCase() === 'get') {
-					this.cacheFallbackService.setCachedData(
-						`${serviceName}-${path}`,
-						response.data,
-					)
-				}
+						if (method.toLowerCase() === 'get') {
+							this.cacheFallbackService.setCachedData(
+								`${serviceName}-${path}`,
+								response.data,
+							)
+						}
 
-				return response.data
+						return response.data
+					}, service.timeout)
+				}, 4)
 			},
 			`proxy-${serviceName}`,
 			fallback,
 			{ failureThreshold: 3, timeout: 30000, resetTimeout: 30000 },
 		)
-	}
-
-	async getServiceHealth(serviceName: keyof typeof serviceConfig) {
-		const service = serviceConfig[serviceName]
-
-		const url = `${service.url}/health`
-
-		try {
-			const response = await firstValueFrom(
-				this.httpServer.get(url, {
-					timeout: 3000,
-				}),
-			)
-
-			return { status: 'healthy', data: response.data }
-		} catch (error: unknown) {
-			return {
-				status: 'unhealthy',
-				error: error instanceof Error ? error.message : 'Unknown error',
-			}
-		}
 	}
 
 	createServiceFallback(serviceName: string, method: string, path: string) {
