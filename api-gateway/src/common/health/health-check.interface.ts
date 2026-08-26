@@ -1,4 +1,8 @@
-type HealthStatus = 'healthy' | 'unhealthy' | 'degraded'
+export enum HealthStatus {
+	HEALTHY = 'healthy',
+	UNHEALTHY = 'unhealthy',
+	DEGRADED = 'degraded',
+}
 
 export interface ServiceHealth {
 	name: string

@@ -4,7 +4,7 @@ import { timeout } from 'rxjs'
 import { firstValueFrom } from 'rxjs/internal/firstValueFrom'
 import { serviceConfig } from '../../config/gateway.config'
 import { CircuitBreakerService } from '../circuit-breaker/circuit-breaker.service'
-import { ServiceHealth } from './health-check.interface'
+import { HealthStatus, ServiceHealth } from './health-check.interface'
 
 @Injectable()
 export class HealthCheckService {
@@ -23,7 +23,7 @@ export class HealthCheckService {
 		const startTime = Date.now()
 
 		try {
-			const health = await this.circuitBreakerService.executeWithCircuitBreaker(
+			const _health = await this.circuitBreakerService.executeWithCircuitBreaker(
 				async () => {
 					const response = await firstValueFrom(
 						this.httpService
@@ -44,7 +44,7 @@ export class HealthCheckService {
 			const serviceHealth: ServiceHealth = {
 				name: serviceName,
 				url: service.url,
-				status: health === 200 ? 'healthy' : 'unhealthy',
+				status: HealthStatus.HEALTHY,
 				responseTime,
 				lastCheck: new Date(),
 			}
@@ -58,7 +58,7 @@ export class HealthCheckService {
 			const serviceHealth: ServiceHealth = {
 				name: serviceName,
 				url: service.url,
-				status: 'unhealthy',
+				status: HealthStatus.UNHEALTHY,
 				responseTime,
 				lastCheck: new Date(),
 				error: error as Error,
@@ -96,7 +96,7 @@ export class HealthCheckService {
 				return {
 					name: serviceName,
 					url: service.url,
-					status: 'unhealthy',
+					status: HealthStatus.UNHEALTHY,
 					responseTime,
 					lastCheck: new Date(),
 					error: result.reason as Error,
