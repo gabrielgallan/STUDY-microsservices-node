@@ -17,7 +17,7 @@ export class HealthService {
 				uptime: process.uptime(),
 				memory: process.memoryUsage(),
 			},
-			services: {},
+			services: {} as Record<string, Record<string, unknown>>,
 		}
 
 		let hasUnhealthyServices = false

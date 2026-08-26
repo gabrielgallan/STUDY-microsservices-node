@@ -42,10 +42,12 @@ export class CircuitBreakerService {
 			this.onSucess(circuit, key)
 
 			return result
-		} catch (error) {
+		} catch (error: unknown) {
 			this.onFailure(circuit, key, config)
 
-			this.logger.error(`Operation for ${key} failed: ${error.message}`)
+			this.logger.error(
+				`Operation for ${key} failed: ${error instanceof Error ? error.message : error}`,
+			)
 
 			if (fallback) {
 				this.logger.warn(`Returning fallback for ${key} due to operation failure.`)
