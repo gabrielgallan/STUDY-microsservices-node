@@ -3,20 +3,20 @@ import z from 'zod'
 
 export const envSchema = z.object({
 	NODE_ENV: z.enum(['development', 'test', 'production']).default('production'),
-	PORT: z.coerce.number().default(3003),
+	PORT: z.coerce.number().default(3004),
 
 	DB_HOST: z.string().default('localhost'),
-	DB_PORT: z.coerce.number().default(5433),
+	DB_PORT: z.coerce.number().default(5434),
 	DB_USERNAME: z.string().default('docker'),
 	DB_PASSWORD: z.string().default('docker'),
-	DB_DATABASE: z.string().default('checkout'),
+	DB_DATABASE: z.string().default('payments'),
 
 	JWT_SECRET: z.string(),
 	JWT_EXPIRES_IN: z.string().default('1h'),
 
 	USERS_SERVICE_URL: z.url().default('http://localhost:3001'),
 	PRODUCTS_SERVICE_URL: z.url().default('http://localhost:3002'),
-	PAYMENTS_SERVICE_URL: z.url().default('http://localhost:3004'),
+	CHECKOUT_SERVICE_URL: z.url().default('http://localhost:3003'),
 
 	RABBITMQ_URL: z.string().default('amqp://admin:admin@localhost:5672'),
 	RABBITMQ_QUEUE_PAYMENTS: z.string().default('payment_queue'),

@@ -1,11 +1,11 @@
-name: checkout-service
+name: payments-service
 
 services:
   postgres:
     image: bitnami/postgresql
     ports:
-      - 5433:5432
+      - 5434:5432
     environment:
       - POSTGRESQL_USERNAME=docker
       - POSTGRESQL_PASSWORD=docker
-      - POSTGRESQL_DATABASE=checkout
+      - POSTGRESQL_DATABASE=payments

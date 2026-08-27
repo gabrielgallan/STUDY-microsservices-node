@@ -2,10 +2,8 @@ import { Module } from '@nestjs/common'
 import { ConfigModule } from '@nestjs/config'
 import { TypeOrmModule } from '@nestjs/typeorm'
 import { databaseConfig } from './config/database.config'
-import { TestController } from './controllers/test.controller'
 import { envSchema } from './env/env'
 import { EnvModule } from './env/env.module'
-import { EventsModule } from './events/events.module'
 
 @Module({
 	imports: [
@@ -15,9 +13,8 @@ import { EventsModule } from './events/events.module'
 		}),
 		TypeOrmModule.forRoot(databaseConfig),
 		EnvModule,
-		EventsModule,
 	],
-	controllers: [TestController],
+	controllers: [],
 	providers: [],
 })
 export class AppModule {}
