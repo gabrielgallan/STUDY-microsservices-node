@@ -21,6 +21,9 @@ export const envSchema = z.object({
 	RABBITMQ_URL: z.string().default('amqp://admin:admin@localhost:5672'),
 	RABBITMQ_QUEUE_PAYMENTS: z.string().default('payment_queue'),
 	RABBITMQ_EXCHANGE: z.string().default('payments'),
+
+	PAYMENT_GATEWAY_URL: z.url(),
+	PAYMENT_GATEWAY_API_KEY: z.string()
 })
 
 type Env = z.infer<typeof envSchema>
