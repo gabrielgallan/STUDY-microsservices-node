@@ -9,3 +9,15 @@ services:
       - POSTGRESQL_USERNAME=docker
       - POSTGRESQL_PASSWORD=docker
       - POSTGRESQL_DATABASE=payments
+    volumes:
+      - payments-postgres-data:/bitnami/postgresql
+    networks:
+      - payments-service-network
+
+volumes:
+  payments-postgres-data:
+    driver: local
+
+networks:
+  payments-service-network:
+    driver: bridge

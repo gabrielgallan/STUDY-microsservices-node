@@ -11,7 +11,7 @@ export class TestController {
 		const paymentOrder: PaymentOrderMessage = {
 			orderId: '12345',
 			userId: 'user-001',
-			amount: 100.0,
+			amount: -100,
 			items: [
 				{
 					productId: 'prod-001',

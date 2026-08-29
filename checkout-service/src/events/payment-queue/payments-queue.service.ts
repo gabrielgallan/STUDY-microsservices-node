@@ -54,11 +54,11 @@ export class PaymentsQueueService {
 	}
 
 	async publishPaymentOrderSafely(paymentOrder: PaymentOrderMessage) {
-		const isValid = await this.validatePaymentOrder(paymentOrder)
+		// const isValid = await this.validatePaymentOrder(paymentOrder)
 
-		if (!isValid) {
-			throw new Error('Invalid payment order')
-		}
+		// if (!isValid) {
+		// 	throw new Error('Invalid payment order')
+		// }
 
 		await this.publishPaymentOrder(paymentOrder)
 	}

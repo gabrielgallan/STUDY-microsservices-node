@@ -9,3 +9,15 @@ services:
       - POSTGRESQL_USERNAME=docker
       - POSTGRESQL_PASSWORD=docker
       - POSTGRESQL_DATABASE=checkout
+    volumes:
+      - checkout-postgres-data:/bitnami/postgresql
+    networks:
+      - checkout-service-network
+
+volumes:
+  checkout-postgres-data:
+    driver: local
+
+networks:
+  checkout-service-network:
+    driver: bridge
