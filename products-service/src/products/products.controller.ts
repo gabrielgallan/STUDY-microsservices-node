@@ -8,6 +8,7 @@ import {
 	Post,
 	Req,
 } from '@nestjs/common'
+import { ApiBearerAuth, ApiTags } from '@nestjs/swagger'
 import type { Request } from 'express'
 import { Public } from '../auth/decorators/public.decorator'
 import type { AuthenticatedUser } from '../auth/interfaces/authenticated-user.interface'
@@ -18,6 +19,7 @@ import { ProductsService } from './products.service'
 
 type AuthenticatedRequest = Request & { user: AuthenticatedUser }
 
+@ApiTags('Products')
 @Controller('products')
 export class ProductsController {
 	constructor(private readonly productsService: ProductsService) {}
@@ -42,6 +44,7 @@ export class ProductsController {
 		return this.productsService.findById(id)
 	}
 
+	@ApiBearerAuth('bearer')
 	@Post()
 	create(
 		@Body() input: CreateProductDto,

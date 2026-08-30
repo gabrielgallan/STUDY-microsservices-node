@@ -1,15 +1,19 @@
 import { type ChildProcess, spawn } from 'node:child_process'
+import { randomUUID } from 'node:crypto'
 import { createServer } from 'node:net'
 import path from 'node:path'
 import { Client } from 'pg'
 
 const USERS_PORT = 3001
+const PRODUCTS_PORT = 3002
 const GATEWAY_PORT = 3005
 const JWT_SECRET = 'gateway-users-real-e2e-secret'
 const USERS_URL = `http://127.0.0.1:${USERS_PORT}`
+const PRODUCTS_URL = `http://127.0.0.1:${PRODUCTS_PORT}`
 const GATEWAY_URL = `http://127.0.0.1:${GATEWAY_PORT}`
 const workspaceRoot = path.resolve(__dirname, '..', '..')
 const usersServiceRoot = path.join(workspaceRoot, 'users-service')
+const productsServiceRoot = path.join(workspaceRoot, 'products-service')
 const gatewayRoot = path.join(workspaceRoot, 'api-gateway')
 
 interface RunningService {
@@ -81,9 +85,7 @@ const waitForService = async (
 
 	while (Date.now() < deadline) {
 		if (service.process.exitCode !== null) {
-			throw new Error(
-				`Service exited before becoming ready.\n${service.getOutput()}`,
-			)
+			throw new Error(`Service exited before becoming ready.\n${service.getOutput()}`)
 		}
 
 		try {
@@ -146,18 +148,23 @@ const requestJson = async <T>(
 	return { status: response.status, body }
 }
 
-describe('users-service through the real api-gateway', () => {
+describe('marketplace services through the real api-gateway', () => {
 	jest.setTimeout(120_000)
 
 	let usersService: RunningService | undefined
+	let productsService: RunningService | undefined
 	let gateway: RunningService | undefined
 	let registeredEmail: string | undefined
+	let registeredUserId: string | undefined
+	let buyerEmail: string | undefined
 	let accessToken: string | undefined
+	let createdProductId: string | undefined
 	const runId = `${Date.now()}-${Math.random().toString(16).slice(2)}`
 
 	beforeAll(async () => {
 		await Promise.all([
 			assertPortIsFree(USERS_PORT),
+			assertPortIsFree(PRODUCTS_PORT),
 			assertPortIsFree(GATEWAY_PORT),
 		])
 
@@ -177,6 +184,22 @@ describe('users-service through the real api-gateway', () => {
 		)
 		await waitForService(`${USERS_URL}/health`, usersService)
 
+		productsService = startService(
+			productsServiceRoot,
+			path.join(productsServiceRoot, 'dist', 'src', 'main.js'),
+			{
+				NODE_ENV: 'test',
+				PORT: String(PRODUCTS_PORT),
+				JWT_SECRET,
+				DB_HOST: '127.0.0.1',
+				DB_PORT: '5436',
+				DB_USERNAME: 'docker',
+				DB_PASSWORD: 'docker',
+				DB_DATABASE: 'products',
+			},
+		)
+		await waitForService(`${PRODUCTS_URL}/health`, productsService)
+
 		gateway = startService(
 			gatewayRoot,
 			path.join(gatewayRoot, 'dist', 'src', 'main.js'),
@@ -185,7 +208,7 @@ describe('users-service through the real api-gateway', () => {
 				PORT: String(GATEWAY_PORT),
 				JWT_SECRET,
 				USERS_SERVICE_URL: USERS_URL,
-				PRODUCTS_SERVICE_URL: 'http://127.0.0.1:65531',
+				PRODUCTS_SERVICE_URL: PRODUCTS_URL,
 				CHECKOUT_SERVICE_URL: 'http://127.0.0.1:65532',
 				PAYMENTS_SERVICE_URL: 'http://127.0.0.1:65533',
 				CORS_ORIGINS: '*',
@@ -195,7 +218,27 @@ describe('users-service through the real api-gateway', () => {
 	})
 
 	afterAll(async () => {
-		if (registeredEmail) {
+		if (createdProductId) {
+			const database = new Client({
+				host: '127.0.0.1',
+				port: 5436,
+				user: 'docker',
+				password: 'docker',
+				database: 'products',
+			})
+
+			try {
+				await database.connect()
+				await database.query('DELETE FROM products WHERE id = $1', [createdProductId])
+			} finally {
+				await database.end().catch(() => undefined)
+			}
+		}
+
+		const registeredEmails = [registeredEmail, buyerEmail].filter(
+			(email): email is string => Boolean(email),
+		)
+		if (registeredEmails.length > 0) {
 			const database = new Client({
 				host: '127.0.0.1',
 				port: 5435,
@@ -206,8 +249,8 @@ describe('users-service through the real api-gateway', () => {
 
 			try {
 				await database.connect()
-				await database.query('DELETE FROM users WHERE email = $1', [
-					registeredEmail,
+				await database.query('DELETE FROM users WHERE email = ANY($1)', [
+					registeredEmails,
 				])
 			} finally {
 				await database.end().catch(() => undefined)
@@ -215,6 +258,7 @@ describe('users-service through the real api-gateway', () => {
 		}
 
 		await stopService(gateway)
+		await stopService(productsService)
 		await stopService(usersService)
 	})
 
@@ -246,6 +290,7 @@ describe('users-service through the real api-gateway', () => {
 			status: 'active',
 		})
 		expect(registration.body).not.toHaveProperty('password')
+		registeredUserId = registration.body.id as string
 
 		const login = await requestJson<{
 			token: string
@@ -325,6 +370,156 @@ describe('users-service through the real api-gateway', () => {
 		}
 	})
 
+	it('creates and queries a product through port 3005', async () => {
+		if (!accessToken || !registeredUserId) {
+			throw new Error('The seller login flow did not provide an identity and token')
+		}
+
+		const authorization = `Bearer ${accessToken}`
+		const payload = {
+			name: `Gateway product ${runId}`,
+			description: 'Product created by the real gateway integration suite',
+			price: 49.9,
+			stock: 7,
+		}
+		const creation = await requestJson<Record<string, unknown>>(
+			`${GATEWAY_URL}/products`,
+			{
+				method: 'POST',
+				headers: {
+					Authorization: authorization,
+					'Content-Type': 'application/json',
+				},
+				body: JSON.stringify(payload),
+			},
+		)
+
+		expect(creation.status).toBe(201)
+		expect(creation.body).toMatchObject({
+			...payload,
+			sellerId: registeredUserId,
+			isActive: true,
+		})
+		createdProductId = creation.body.id as string
+
+		const database = new Client({
+			host: '127.0.0.1',
+			port: 5436,
+			user: 'docker',
+			password: 'docker',
+			database: 'products',
+		})
+		try {
+			await database.connect()
+			const persisted = await database.query(
+				'SELECT COUNT(*)::int AS count FROM products WHERE id = $1',
+				[createdProductId],
+			)
+			expect(persisted.rows[0].count).toBe(1)
+		} finally {
+			await database.end()
+		}
+
+		const catalog = await requestJson<Array<Record<string, unknown>>>(
+			`${GATEWAY_URL}/products`,
+		)
+		expect(catalog.status).toBe(200)
+		expect(catalog.body).toEqual(
+			expect.arrayContaining([
+				expect.objectContaining({ id: createdProductId, sellerId: registeredUserId }),
+			]),
+		)
+
+		const sellerProducts = await requestJson<Array<Record<string, unknown>>>(
+			`${GATEWAY_URL}/products/seller/${registeredUserId}`,
+		)
+		expect(sellerProducts.status).toBe(200)
+		expect(sellerProducts.body).toEqual(
+			expect.arrayContaining([expect.objectContaining({ id: createdProductId })]),
+		)
+
+		const product = await requestJson<Record<string, unknown>>(
+			`${GATEWAY_URL}/products/${createdProductId}`,
+		)
+		expect(product.status).toBe(200)
+		expect(product.body).toMatchObject({
+			id: createdProductId,
+			sellerId: registeredUserId,
+		})
+	})
+
+	it('preserves product authentication, authorization and not-found errors', async () => {
+		const payload = {
+			name: 'Rejected gateway product',
+			description: 'This product must never be persisted',
+			price: 10,
+			stock: 1,
+		}
+		for (const authorization of [undefined, 'Bearer invalid-token']) {
+			const headers: Record<string, string> = { 'Content-Type': 'application/json' }
+			if (authorization) {
+				headers.Authorization = authorization
+			}
+
+			const response = await requestJson<Record<string, unknown>>(
+				`${GATEWAY_URL}/products`,
+				{ method: 'POST', headers, body: JSON.stringify(payload) },
+			)
+			expect(response.status).toBe(401)
+		}
+
+		buyerEmail = `gateway-buyer-${runId}@example.invalid`
+		const buyerPassword = 'password123'
+		const registration = await requestJson<Record<string, unknown>>(
+			`${GATEWAY_URL}/auth/register`,
+			{
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({
+					email: buyerEmail,
+					password: buyerPassword,
+					firstName: 'Gateway',
+					lastName: 'Buyer',
+					role: 'buyer',
+				}),
+			},
+		)
+		expect(registration.status).toBe(201)
+
+		const login = await requestJson<{ token: string }>(`${GATEWAY_URL}/auth/login`, {
+			method: 'POST',
+			headers: { 'Content-Type': 'application/json' },
+			body: JSON.stringify({ email: buyerEmail, password: buyerPassword }),
+		})
+		expect(login.status).toBe(200)
+
+		const forbidden = await requestJson<Record<string, unknown>>(
+			`${GATEWAY_URL}/products`,
+			{
+				method: 'POST',
+				headers: {
+					Authorization: `Bearer ${login.body.token}`,
+					'Content-Type': 'application/json',
+				},
+				body: JSON.stringify(payload),
+			},
+		)
+		expect(forbidden.status).toBe(403)
+		expect(forbidden.body).toMatchObject({
+			message: 'Apenas vendedores podem criar produtos',
+			statusCode: 403,
+		})
+
+		const missingProduct = await requestJson<Record<string, unknown>>(
+			`${GATEWAY_URL}/products/${randomUUID()}`,
+		)
+		expect(missingProduct.status).toBe(404)
+		expect(missingProduct.body).toMatchObject({
+			message: 'Produto não encontrado',
+			statusCode: 404,
+		})
+	})
+
 	it.each(['/users/profile', '/users/sellers'])(
 		'rejects unauthenticated and invalid requests to %s',
 		async (route) => {
@@ -353,6 +548,23 @@ describe('users-service through the real api-gateway', () => {
 					name: 'users',
 					status: 'healthy',
 					url: USERS_URL,
+				}),
+			]),
+		)
+	})
+
+	it('reports the real products-service as healthy through the gateway', async () => {
+		const health = await requestJson<{
+			services: Array<{ name: string; status: string; url: string }>
+		}>(`${GATEWAY_URL}/health/services`)
+
+		expect(health.status).toBe(200)
+		expect(health.body.services).toEqual(
+			expect.arrayContaining([
+				expect.objectContaining({
+					name: 'products',
+					status: 'healthy',
+					url: PRODUCTS_URL,
 				}),
 			]),
 		)

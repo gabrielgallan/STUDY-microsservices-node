@@ -7,6 +7,7 @@ import { JwtAuthGuard } from './auth/guards/jwt-auth.guard'
 import { databaseConfig } from './config/database.config'
 import { envSchema } from './env/env'
 import { EnvModule } from './env/env.module'
+import { HealthModule } from './health/health.module'
 import { ProductsModule } from './products/products.module'
 
 @Module({
@@ -17,6 +18,7 @@ import { ProductsModule } from './products/products.module'
 		}),
 		TypeOrmModule.forRoot(databaseConfig),
 		EnvModule,
+		HealthModule,
 		ProductsModule,
 		AuthModule,
 	],

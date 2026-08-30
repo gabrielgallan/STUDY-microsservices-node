@@ -1,5 +1,5 @@
 import { HttpService } from '@nestjs/axios'
-import { Injectable, Logger } from '@nestjs/common'
+import { HttpException, Injectable, Logger } from '@nestjs/common'
 import { firstValueFrom } from 'rxjs'
 import { UserPayload } from '../../auth/strategies/jwt.strategy'
 import { CircuitBreakerService } from '../../common/circuit-breaker/circuit-breaker.service'
@@ -10,6 +10,12 @@ import { TimeoutService } from '../../common/timeout/timeout.service'
 import { serviceConfig } from '../../config/gateway.config'
 
 type HttpMethod = 'get' | 'post' | 'put' | 'delete' | 'patch'
+
+interface ProxiedResponse {
+	data: unknown
+	status: number
+	isClientError: boolean
+}
 
 @Injectable()
 export class ProxyService {
@@ -41,44 +47,70 @@ export class ProxyService {
 		const fallback = this.createServiceFallback(serviceName, method, path)
 
 		// Layer 1: Circuit Breaker
-		return await this.circuitBreakerService.executeWithCircuitBreaker(
-			async () => {
-				// Layer 2: Retry
-				return await this.retryService.executeWithExponentialBackoff(async () => {
-					// Layer 3: Timeout
-					return await this.timeoutService.executeWithCustomTimeout(async () => {
-						const enhancedHeaders = {
-							...headers,
-							'x-user-id': userInfo?.userId,
-							'x-user-email': userInfo?.email,
-							'x-user-role': userInfo?.role,
-						}
+		const proxiedResponse =
+			await this.circuitBreakerService.executeWithCircuitBreaker<ProxiedResponse>(
+				async () => {
+					// Layer 2: Retry
+					return await this.retryService.executeWithExponentialBackoff(async () => {
+						// Layer 3: Timeout
+						return await this.timeoutService.executeWithCustomTimeout(async () => {
+							const enhancedHeaders = {
+								...headers,
+								'x-user-id': userInfo?.userId,
+								'x-user-email': userInfo?.email,
+								'x-user-role': userInfo?.role,
+							}
 
-						const response = await firstValueFrom(
-							this.httpServer.request({
-								method: method.toLowerCase(),
-								url,
-								data,
-								headers: enhancedHeaders,
-								timeout: service.timeout,
-							}),
-						)
-
-						if (method.toLowerCase() === 'get') {
-							this.cacheFallbackService.setCachedData(
-								`${serviceName}-${path}`,
-								response.data,
+							const response = await firstValueFrom(
+								this.httpServer.request({
+									method: method.toLowerCase(),
+									url,
+									data,
+									headers: enhancedHeaders,
+									timeout: service.timeout,
+									validateStatus: (status) =>
+										(status >= 200 && status < 300) || (status >= 400 && status < 500),
+								}),
 							)
-						}
 
-						return response.data
-					}, service.timeout)
-				}, 4)
-			},
-			`proxy-${serviceName}`,
-			fallback,
-			{ failureThreshold: 3, timeout: 30000, resetTimeout: 30000 },
-		)
+							const isClientError = response.status >= 400 && response.status < 500
+
+							if (method.toLowerCase() === 'get' && !isClientError) {
+								this.cacheFallbackService.setCachedData(
+									`${serviceName}-${path}`,
+									response.data,
+								)
+							}
+
+							return {
+								data: response.data,
+								status: response.status,
+								isClientError,
+							}
+						}, service.timeout)
+					}, 4)
+				},
+				`proxy-${serviceName}`,
+				async () => ({
+					data: await fallback(),
+					status: 200,
+					isClientError: false,
+				}),
+				{ failureThreshold: 3, timeout: 30000, resetTimeout: 30000 },
+			)
+
+		if (proxiedResponse.isClientError) {
+			const errorResponse =
+				typeof proxiedResponse.data === 'string'
+					? proxiedResponse.data
+					: proxiedResponse.data !== null && typeof proxiedResponse.data === 'object'
+						? (proxiedResponse.data as Record<string, unknown>)
+						: { message: String(proxiedResponse.data) }
+
+			throw new HttpException(errorResponse, proxiedResponse.status)
+		}
+
+		return proxiedResponse.data
 	}
 
 	createServiceFallback(serviceName: string, method: string, path: string) {
