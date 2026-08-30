@@ -1,0 +1,23 @@
+name: products-service
+
+services:
+  postgres:
+    image: bitnami/postgresql
+    ports:
+      - 5436:5432
+    environment:
+      - POSTGRESQL_USERNAME=docker
+      - POSTGRESQL_PASSWORD=docker
+      - POSTGRESQL_DATABASE=products
+    volumes:
+      - products-postgres-data:/bitnami/postgresql
+    networks:
+      - products-service-network
+
+volumes:
+  products-postgres-data:
+    driver: local
+
+networks:
+  products-service-network:
+    driver: bridge
