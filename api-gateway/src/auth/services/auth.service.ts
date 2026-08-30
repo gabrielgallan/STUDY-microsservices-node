@@ -47,24 +47,14 @@ export class AuthService {
 		private readonly proxyService: ProxyService,
 	) {}
 
-	async validateJwtToken(
-		authorization: string,
-	): Promise<TokenValidationResponse> {
-		try {
-			const { data } = await firstValueFrom(
-				this.httpService.get<TokenValidationResponse>(
-					`${serviceConfig.users.url}/auth/validate-token`,
-					{
-						headers: { Authorization: authorization },
-						timeout: serviceConfig.users.timeout,
-					},
-				),
-			)
-
-			return data
-		} catch {
-			throw new UnauthorizedException('Invalid token')
-		}
+	async validateJwtToken(authorization: string): Promise<TokenValidationResponse> {
+		return (await this.proxyService.proxyRequest(
+			'users',
+			'get',
+			'/auth/validate-token',
+			undefined,
+			{ Authorization: authorization },
+		)) as TokenValidationResponse
 	}
 
 	async validateSessionToken(sessionToken: string): Promise<UserSession> {

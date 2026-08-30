@@ -81,6 +81,37 @@ describe('ProxyService downstream response handling', () => {
 		},
 	)
 
+	it('preserves a users-service JWT validation 401 without retry or fallback', async () => {
+		const authorization = 'Bearer original-jwt'
+		const body = { statusCode: 401, message: 'Unauthorized' }
+		request.mockReturnValueOnce(of({ status: 401, data: body }))
+
+		let receivedError: unknown
+		try {
+			await service.proxyRequest('users', 'get', '/auth/validate-token', undefined, {
+				Authorization: authorization,
+			})
+		} catch (error) {
+			receivedError = error
+		}
+
+		expect(receivedError).toBeInstanceOf(HttpException)
+		expect((receivedError as HttpException).getStatus()).toBe(401)
+		expect((receivedError as HttpException).getResponse()).toEqual(body)
+		expect(request).toHaveBeenCalledTimes(1)
+		expect(request.mock.calls[0][0]).toEqual(
+			expect.objectContaining({
+				method: 'get',
+				url: 'http://localhost:3001/auth/validate-token',
+				headers: expect.objectContaining({ Authorization: authorization }),
+			}),
+		)
+		expect(executeWithExponentialBackoff).toHaveBeenCalledTimes(1)
+		expect(cacheFallbackExecution).not.toHaveBeenCalled()
+		expect(errorFallbackExecution).not.toHaveBeenCalled()
+		expect(setCachedData).not.toHaveBeenCalled()
+	})
+
 	it.each([
 		['a downstream 500', new Error('Request failed with status code 500')],
 		['a network failure', new Error('ECONNREFUSED')],
