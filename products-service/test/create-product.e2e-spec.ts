@@ -275,14 +275,10 @@ describe('POST /products', () => {
 		expect(await productsRepository.countBy({ sellerId })).toBe(0)
 	})
 
-	it('does not expose out-of-scope product endpoints', async () => {
+	it('does not expose out-of-scope product mutation endpoints', async () => {
 		const { authorization } = createAuthorization(UserRole.SELLER)
 		const productId = randomUUID()
 
-		await request(app.getHttpServer())
-			.get('/products')
-			.set('Authorization', authorization)
-			.expect(404)
 		await request(app.getHttpServer())
 			.patch(`/products/${productId}`)
 			.set('Authorization', authorization)
