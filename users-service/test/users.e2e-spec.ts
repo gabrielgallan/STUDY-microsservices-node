@@ -181,4 +181,64 @@ describe('Users queries', () => {
 			expect(serializedResponse).not.toContain(secondActiveSeller.password)
 		})
 	})
+
+	describe('GET /users/:id', () => {
+		it.each([
+			{ role: UserRole.BUYER, status: UserStatus.INACTIVE },
+			{ role: UserRole.SELLER, status: UserStatus.ACTIVE },
+		])('returns a $status $role by UUID without password', async ({ role, status }) => {
+			const authenticatedUser = await createUser({
+				label: `lookup-requester-${role}-${status}`,
+			})
+			const requestedUser = await createUser({
+				label: `lookup-target-${role}-${status}`,
+				role,
+				status,
+			})
+			const token = signUserToken(authenticatedUser)
+
+			const response = await request(app.getHttpServer())
+				.get(`/users/${requestedUser.id}`)
+				.set('Authorization', `Bearer ${token}`)
+				.expect(200)
+
+			expect(Object.keys(response.body).sort()).toEqual(publicUserFields)
+			expect(response.body).toMatchObject({
+				id: requestedUser.id,
+				email: requestedUser.email,
+				role,
+				status,
+			})
+			expect(response.body).not.toHaveProperty('password')
+			expect(JSON.stringify(response.body)).not.toContain(requestedUser.password)
+		})
+
+		it('returns 404 with a stable message for an unknown UUID', async () => {
+			const authenticatedUser = await createUser({ label: 'lookup-not-found' })
+			const token = signUserToken(authenticatedUser)
+
+			const response = await request(app.getHttpServer())
+				.get('/users/6d45939e-0529-4cb6-b63a-f73271feb506')
+				.set('Authorization', `Bearer ${token}`)
+				.expect(404)
+
+			expect(response.body).toMatchObject({
+				message: 'Usuário não encontrado',
+				statusCode: 404,
+			})
+		})
+
+		it('returns 400 before querying for a malformed UUID', async () => {
+			const authenticatedUser = await createUser({ label: 'lookup-invalid-uuid' })
+			const token = signUserToken(authenticatedUser)
+
+			const response = await request(app.getHttpServer())
+				.get('/users/not-a-uuid')
+				.set('Authorization', `Bearer ${token}`)
+				.expect(400)
+
+			expect(response.body.statusCode).toBe(400)
+			expect(response.body.message).toContain('uuid')
+		})
+	})
 })

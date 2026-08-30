@@ -1,4 +1,4 @@
-import { Injectable, UnauthorizedException } from '@nestjs/common'
+import { Injectable, NotFoundException, UnauthorizedException } from '@nestjs/common'
 import { InjectRepository } from '@nestjs/typeorm'
 import { Repository } from 'typeorm'
 import { User, UserRole, UserStatus } from './entities/user.entity'
@@ -29,5 +29,15 @@ export class UsersService {
 		})
 
 		return sellers.map(toPublicUser)
+	}
+
+	async getById(userId: string): Promise<PublicUser> {
+		const user = await this.usersRepository.findOneBy({ id: userId })
+
+		if (!user) {
+			throw new NotFoundException('Usuário não encontrado')
+		}
+
+		return toPublicUser(user)
 	}
 }
