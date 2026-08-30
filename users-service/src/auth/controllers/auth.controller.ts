@@ -1,7 +1,7 @@
 import { Body, Controller, HttpCode, HttpStatus, Post } from '@nestjs/common'
+import type { PublicUser } from '../../users/interfaces/public-user.interface'
 import { Public } from '../decorators/public.decorator'
 import type { LoginResponse } from '../interfaces/login-response.interface'
-import type { PublicUser } from '../interfaces/public-user.interface'
 import { AuthService } from '../services/auth.service'
 import { LoginDto } from './dtos/login.dto'
 import { RegisterDto } from './dtos/register.dto'

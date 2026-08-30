@@ -1,4 +1,4 @@
-import type { UserRole, UserStatus } from '../../users/entities/user.entity'
+import type { UserRole, UserStatus } from '../entities/user.entity'
 
 export interface PublicUser {
 	id: string

@@ -4,11 +4,12 @@ import { InjectRepository } from '@nestjs/typeorm'
 import { compare, hash } from 'bcryptjs'
 import { QueryFailedError, Repository } from 'typeorm'
 import { User, UserStatus } from '../../users/entities/user.entity'
+import type { PublicUser } from '../../users/interfaces/public-user.interface'
+import { toPublicUser } from '../../users/mappers/user.mapper'
 import type { LoginInput } from '../controllers/dtos/login.dto'
 import type { RegisterInput } from '../controllers/dtos/register.dto'
 import type { JwtPayload } from '../interfaces/jwt-payload.interface'
 import type { LoginResponse } from '../interfaces/login-response.interface'
-import type { PublicUser } from '../interfaces/public-user.interface'
 
 const BCRYPT_SALT_ROUNDS = 10
 const POSTGRES_UNIQUE_VIOLATION = '23505'
@@ -46,7 +47,7 @@ export class AuthService {
 		const token = await this.jwtService.signAsync(payload)
 
 		return {
-			user: this.toPublicUser(user),
+			user: toPublicUser(user),
 			token,
 		}
 	}
@@ -71,7 +72,7 @@ export class AuthService {
 		try {
 			const savedUser = await this.usersRepository.save(user)
 
-			return this.toPublicUser(savedUser)
+			return toPublicUser(savedUser)
 		} catch (error) {
 			if (this.isUniqueViolation(error)) {
 				throw new ConflictException('Email already registered')
@@ -96,18 +97,5 @@ export class AuthService {
 		const driverError = error.driverError as { code?: string }
 
 		return driverError.code === POSTGRES_UNIQUE_VIOLATION
-	}
-
-	private toPublicUser(user: User): PublicUser {
-		return {
-			id: user.id,
-			email: user.email,
-			firstName: user.firstName,
-			lastName: user.lastName,
-			role: user.role,
-			status: user.status,
-			createdAt: user.createdAt,
-			updatedAt: user.updatedAt,
-		}
 	}
 }
