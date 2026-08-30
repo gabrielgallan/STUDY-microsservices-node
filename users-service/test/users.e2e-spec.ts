@@ -133,4 +133,52 @@ describe('Users queries', () => {
 			})
 		})
 	})
+
+	describe('GET /users/sellers', () => {
+		it('returns all and only active sellers without passwords', async () => {
+			const authenticatedUser = await createUser({ label: 'sellers-requester' })
+			const firstActiveSeller = await createUser({
+				label: 'seller-active-first',
+				role: UserRole.SELLER,
+			})
+			const secondActiveSeller = await createUser({
+				label: 'seller-active-second',
+				role: UserRole.SELLER,
+			})
+			const inactiveSeller = await createUser({
+				label: 'seller-inactive',
+				role: UserRole.SELLER,
+				status: UserStatus.INACTIVE,
+			})
+			const activeBuyer = await createUser({ label: 'sellers-active-buyer' })
+			const token = signUserToken(authenticatedUser)
+
+			const response = await request(app.getHttpServer())
+				.get('/users/sellers')
+				.set('Authorization', `Bearer ${token}`)
+				.expect(200)
+
+			const returnedIds = response.body.map((user: { id: string }) => user.id)
+
+			expect(returnedIds).toEqual(
+				expect.arrayContaining([firstActiveSeller.id, secondActiveSeller.id]),
+			)
+			expect(returnedIds).not.toContain(inactiveSeller.id)
+			expect(returnedIds).not.toContain(activeBuyer.id)
+			expect(response.body.length).toBeGreaterThanOrEqual(2)
+
+			for (const user of response.body) {
+				expect(Object.keys(user).sort()).toEqual(publicUserFields)
+				expect(user).toMatchObject({
+					role: UserRole.SELLER,
+					status: UserStatus.ACTIVE,
+				})
+				expect(user).not.toHaveProperty('password')
+			}
+
+			const serializedResponse = JSON.stringify(response.body)
+			expect(serializedResponse).not.toContain(firstActiveSeller.password)
+			expect(serializedResponse).not.toContain(secondActiveSeller.password)
+		})
+	})
 })

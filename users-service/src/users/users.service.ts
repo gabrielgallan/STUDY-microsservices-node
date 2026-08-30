@@ -1,7 +1,7 @@
 import { Injectable, UnauthorizedException } from '@nestjs/common'
 import { InjectRepository } from '@nestjs/typeorm'
 import { Repository } from 'typeorm'
-import { User } from './entities/user.entity'
+import { User, UserRole, UserStatus } from './entities/user.entity'
 import type { PublicUser } from './interfaces/public-user.interface'
 import { toPublicUser } from './mappers/user.mapper'
 
@@ -20,5 +20,14 @@ export class UsersService {
 		}
 
 		return toPublicUser(user)
+	}
+
+	async getActiveSellers(): Promise<PublicUser[]> {
+		const sellers = await this.usersRepository.findBy({
+			role: UserRole.SELLER,
+			status: UserStatus.ACTIVE,
+		})
+
+		return sellers.map(toPublicUser)
 	}
 }

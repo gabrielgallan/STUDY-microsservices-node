@@ -14,4 +14,9 @@ export class UsersController {
 	getProfile(@Req() request: AuthenticatedRequest): Promise<PublicUser> {
 		return this.usersService.getProfile(request.user.id)
 	}
+
+	@Get('sellers')
+	getActiveSellers(): Promise<PublicUser[]> {
+		return this.usersService.getActiveSellers()
+	}
 }
