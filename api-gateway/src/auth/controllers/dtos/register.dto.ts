@@ -2,13 +2,15 @@ import { ApiProperty } from '@nestjs/swagger'
 import { createZodDto } from 'nestjs-zod'
 import z from 'zod'
 
-const registerSchema = z.object({
-	email: z.email(),
-	password: z.string().min(6),
-	firstName: z.string().min(1),
-	lastName: z.string().min(1),
-	role: z.enum(['user', 'admin', 'seller']).optional().default('user'),
-})
+const registerSchema = z
+	.object({
+		email: z.string().trim().toLowerCase().pipe(z.email()),
+		password: z.string().min(6),
+		firstName: z.string().trim().min(1).max(100),
+		lastName: z.string().trim().min(1).max(100),
+		role: z.enum(['buyer', 'seller']),
+	})
+	.strict()
 
 type Role = z.infer<typeof registerSchema>['role']
 
@@ -34,7 +36,7 @@ export class RegisterDto extends createZodDto(registerSchema) {
 	lastName!: string
 
 	@ApiProperty({
-		example: 'user',
+		example: 'buyer',
 	})
 	role!: Role
 }

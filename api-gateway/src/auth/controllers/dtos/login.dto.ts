@@ -2,10 +2,12 @@ import { ApiProperty } from '@nestjs/swagger'
 import { createZodDto } from 'nestjs-zod'
 import { z } from 'zod'
 
-const loginSchema = z.object({
-	email: z.email(),
-	password: z.string().min(6),
-})
+const loginSchema = z
+	.object({
+		email: z.string().trim().toLowerCase().pipe(z.email()),
+		password: z.string().min(6),
+	})
+	.strict()
 
 export class LoginDto extends createZodDto(loginSchema) {
 	@ApiProperty({

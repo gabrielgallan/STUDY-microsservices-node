@@ -7,29 +7,29 @@ import { LoginDto } from './dtos/login.dto'
 import { RegisterDto } from './dtos/register.dto'
 
 @ApiTags('Authentication')
-@Controller('/api/auth')
+@Controller('auth')
 export class AuthController {
-    constructor(private authService: AuthService) {}
+	constructor(private readonly authService: AuthService) {}
 
-    @ApiOperation({ summary: 'User login' })
-    @ApiResponse({ status: 200, description: 'User logged in successfully' })
-    @ApiResponse({ status: 400, description: 'Invalid data' })
-    @Post('login')
-    @HttpCode(200)
-    @Public()
-    @Throttle({ short: { limit: 5, ttl: 60000 } })
-    async login(@Body() loginDto: LoginDto) {
-        return this.authService.login(loginDto)
-    }
-    
-    @ApiOperation({ summary: 'User registration' })
-    @ApiResponse({ status: 201, description: 'User registered successfully' })
-    @ApiResponse({ status: 400, description: 'Invalid data' })
-    @Post('registers')
-    @HttpCode(201)
-    @Public()
-    @Throttle({ medium: { limit: 3, ttl: 60000 } })
-    async register(@Body() registerDto: RegisterDto) {
-        return this.authService.register(registerDto);
-    }
+	@ApiOperation({ summary: 'User login' })
+	@ApiResponse({ status: 200, description: 'User logged in successfully' })
+	@ApiResponse({ status: 400, description: 'Invalid data' })
+	@Post('login')
+	@HttpCode(200)
+	@Public()
+	@Throttle({ short: { limit: 5, ttl: 60000 } })
+	login(@Body() loginDto: LoginDto) {
+		return this.authService.login(loginDto)
+	}
+
+	@ApiOperation({ summary: 'User registration' })
+	@ApiResponse({ status: 201, description: 'User registered successfully' })
+	@ApiResponse({ status: 400, description: 'Invalid data' })
+	@Post('register')
+	@HttpCode(201)
+	@Public()
+	@Throttle({ medium: { limit: 3, ttl: 60000 } })
+	register(@Body() registerDto: RegisterDto) {
+		return this.authService.register(registerDto)
+	}
 }

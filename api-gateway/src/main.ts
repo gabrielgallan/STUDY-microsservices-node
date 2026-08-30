@@ -1,8 +1,9 @@
-import { Logger, ValidationPipe } from '@nestjs/common'
+import { Logger } from '@nestjs/common'
 import { NestFactory } from '@nestjs/core'
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger'
 import { apiReference } from '@scalar/nestjs-api-reference'
 import helmet from 'helmet'
+import { ZodValidationPipe } from 'nestjs-zod'
 import { AppModule } from './app.module'
 import { EnvService } from './env/env.service'
 
@@ -102,13 +103,7 @@ async function bootstrap() {
 
 	const logger = new Logger('Main')
 
-	app.useGlobalPipes(
-		new ValidationPipe({
-			transform: true,
-			whitelist: true,
-			forbidNonWhitelisted: true,
-		}),
-	)
+	app.useGlobalPipes(new ZodValidationPipe())
 
 	const port = env.get('PORT')
 
