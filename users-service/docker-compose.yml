@@ -1,0 +1,23 @@
+name: users-service
+
+services:
+  postgres:
+    image: bitnami/postgresql
+    ports:
+      - 5435:5432
+    environment:
+      - POSTGRESQL_USERNAME=docker
+      - POSTGRESQL_PASSWORD=docker
+      - POSTGRESQL_DATABASE=users
+    volumes:
+      - users-postgres-data:/bitnami/postgresql
+    networks:
+      - users-service-network
+
+volumes:
+  users-postgres-data:
+    driver: local
+
+networks:
+  users-service-network:
+    driver: bridge
