@@ -13,6 +13,8 @@ export const envSchema = z.object({
 	DB_USERNAME: nonEmptyStringSchema.default('docker'),
 	DB_PASSWORD: nonEmptyStringSchema.default('docker'),
 	DB_DATABASE: nonEmptyStringSchema.default('products'),
+
+	JWT_SECRET: nonEmptyStringSchema,
 })
 
 export type Env = z.infer<typeof envSchema>

@@ -110,7 +110,7 @@ describe('Products service scaffold (e2e)', () => {
 
 describe('Environment schema', () => {
 	it('provides the local defaults', () => {
-		expect(envSchema.parse({})).toEqual({
+		expect(envSchema.parse({ JWT_SECRET: 'products-service-e2e-secret' })).toEqual({
 			NODE_ENV: 'production',
 			PORT: 3002,
 			DB_HOST: 'localhost',
@@ -118,6 +118,7 @@ describe('Environment schema', () => {
 			DB_USERNAME: 'docker',
 			DB_PASSWORD: 'docker',
 			DB_DATABASE: 'products',
+			JWT_SECRET: 'products-service-e2e-secret',
 		})
 	})
 
@@ -131,6 +132,7 @@ describe('Environment schema', () => {
 				DB_USERNAME: 'products-user',
 				DB_PASSWORD: 'products-password',
 				DB_DATABASE: 'products-development',
+				JWT_SECRET: 'products-service-development-secret',
 			}),
 		).toEqual({
 			NODE_ENV: 'development',
@@ -140,7 +142,12 @@ describe('Environment schema', () => {
 			DB_USERNAME: 'products-user',
 			DB_PASSWORD: 'products-password',
 			DB_DATABASE: 'products-development',
+			JWT_SECRET: 'products-service-development-secret',
 		})
+	})
+
+	it('requires the shared JWT secret', () => {
+		expect(envSchema.safeParse({}).success).toBe(false)
 	})
 
 	it.each([
@@ -154,7 +161,13 @@ describe('Environment schema', () => {
 		['DB_USERNAME', '  '],
 		['DB_PASSWORD', '  '],
 		['DB_DATABASE', '  '],
+		['JWT_SECRET', '  '],
 	])('rejects an invalid %s value', (key, value) => {
-		expect(envSchema.safeParse({ [key]: value }).success).toBe(false)
+		expect(
+			envSchema.safeParse({
+				JWT_SECRET: 'products-service-e2e-secret',
+				[key]: value,
+			}).success,
+		).toBe(false)
 	})
 })
