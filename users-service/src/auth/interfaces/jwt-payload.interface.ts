@@ -1,7 +1,10 @@
-import type { UserRole } from '../../users/entities/user.entity'
+import z from 'zod'
+import { UserRole } from '../../users/entities/user.entity'
 
-export interface JwtPayload {
-	sub: string
-	email: string
-	role: UserRole
-}
+export const jwtPayloadSchema = z.object({
+	sub: z.uuid(),
+	email: z.email(),
+	role: z.enum(UserRole),
+})
+
+export type JwtPayload = z.infer<typeof jwtPayloadSchema>
