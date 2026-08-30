@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common'
 import { EnvModule } from '../env/env.module'
+import { PaymentsModule } from '../payments/payments.module'
 import { DlqController } from './dlq/dlq.controller'
 import { DlqService } from './dlq/dlq.service'
 import { PaymentConsumerService } from './payment-consumer/payment-consumer.service'
@@ -8,7 +9,7 @@ import { RabbitmqService } from './rabbitmq/rabbitmq.service'
 import { MetricsController } from './metrics/metrics.controller';
 
 @Module({
-	imports: [EnvModule],
+	imports: [EnvModule, PaymentsModule],
 	controllers: [DlqController, MetricsController],
 	providers: [
 		RabbitmqService,

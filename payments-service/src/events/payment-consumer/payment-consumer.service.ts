@@ -1,4 +1,5 @@
 import { Injectable, Logger, OnModuleInit } from '@nestjs/common'
+import { PaymentsService } from '../../payments/payments.service'
 import {
 	PaymentOrderMessage,
 	publishedPaymentOrderMessageSchema,
@@ -43,6 +44,7 @@ export class PaymentConsumerService implements OnModuleInit {
 	constructor(
 		private paymentsQueueService: PaymentsQueueService,
 		private rabbitmq: RabbitmqService,
+		private paymentsService: PaymentsService,
 	) {}
 
 	async onModuleInit() {
@@ -94,7 +96,16 @@ export class PaymentConsumerService implements OnModuleInit {
 					`amount=${paymentOrder.amount}`,
 			)
 
-			this.logger.log('Payment order received and validated')
+			const payment = await this.paymentsService.processPayment(paymentOrder)
+
+			/**
+			 * A rejected payment is a completed processing, not a failure: it must
+			 * not throw, otherwise every declined charge would be retried and end
+			 * up in the dead-letter queue.
+			 */
+			this.logger.log(
+				`Payment ${payment.id} for order ${paymentOrder.orderId} finished with status ${payment.status}`,
+			)
 
 			this.updateMetrics(true, startTime)
 		} catch (error) {
