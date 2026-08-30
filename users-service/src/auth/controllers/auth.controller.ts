@@ -1,4 +1,5 @@
 import { Body, Controller, Get, HttpCode, HttpStatus, Post, Req } from '@nestjs/common'
+import { ApiBearerAuth, ApiTags } from '@nestjs/swagger'
 import type { Request } from 'express'
 import type { PublicUser } from '../../users/interfaces/public-user.interface'
 import { Public } from '../decorators/public.decorator'
@@ -11,11 +12,13 @@ import { RegisterDto } from './dtos/register.dto'
 
 type AuthenticatedRequest = Request & { user: AuthenticatedUser }
 
+@ApiTags('Authentication')
 @Controller('auth')
 export class AuthController {
 	constructor(private readonly authService: AuthService) {}
 
 	@Get('validate-token')
+	@ApiBearerAuth('bearer')
 	validateToken(
 		@Req() request: AuthenticatedRequest,
 	): TokenValidationResponse {

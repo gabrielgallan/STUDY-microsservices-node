@@ -2,12 +2,14 @@ import { Logger } from '@nestjs/common'
 import { NestFactory } from '@nestjs/core'
 import { ZodValidationPipe } from 'nestjs-zod'
 import { AppModule } from './app.module'
+import { configureSwagger } from './config/swagger.config'
 import { EnvService } from './env/env.service'
 
 async function bootstrap() {
 	const app = await NestFactory.create(AppModule)
 
 	app.useGlobalPipes(new ZodValidationPipe())
+	configureSwagger(app)
 
 	const env = app.get(EnvService)
 	const logger = new Logger('Main')
