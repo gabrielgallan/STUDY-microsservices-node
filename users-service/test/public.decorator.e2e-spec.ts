@@ -1,3 +1,4 @@
+import { AuthController } from '../src/auth/controllers/auth.controller'
 import { IS_PUBLIC_KEY, Public } from '../src/auth/decorators/public.decorator'
 
 class PublicControllerFixture {
@@ -14,4 +15,16 @@ describe('@Public()', () => {
 
 		expect(metadata).toBe(true)
 	})
+
+	it.each(['login', 'register'] as const)(
+		'marks AuthController.%s as public',
+		(route) => {
+			const metadata = Reflect.getMetadata(
+				IS_PUBLIC_KEY,
+				AuthController.prototype[route],
+			)
+
+			expect(metadata).toBe(true)
+		},
+	)
 })
