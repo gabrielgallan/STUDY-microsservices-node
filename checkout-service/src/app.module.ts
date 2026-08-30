@@ -1,7 +1,8 @@
 import { Module } from '@nestjs/common'
 import { ConfigModule } from '@nestjs/config'
-import { APP_GUARD } from '@nestjs/core'
+import { APP_GUARD, APP_PIPE } from '@nestjs/core'
 import { TypeOrmModule } from '@nestjs/typeorm'
+import { ZodValidationPipe } from 'nestjs-zod'
 import { AuthModule } from './auth/auth.module'
 import { JwtAuthGuard } from './auth/guards/jwt-auth.guard'
 import { CartModule } from './cart/cart.module'
@@ -32,6 +33,10 @@ import { OrdersModule } from './orders/orders.module'
 		{
 			provide: APP_GUARD,
 			useClass: JwtAuthGuard,
+		},
+		{
+			provide: APP_PIPE,
+			useClass: ZodValidationPipe,
 		},
 	],
 })
