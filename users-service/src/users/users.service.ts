@@ -1,4 +1,24 @@
-import { Injectable } from '@nestjs/common'
+import { Injectable, UnauthorizedException } from '@nestjs/common'
+import { InjectRepository } from '@nestjs/typeorm'
+import { Repository } from 'typeorm'
+import { User } from './entities/user.entity'
+import type { PublicUser } from './interfaces/public-user.interface'
+import { toPublicUser } from './mappers/user.mapper'
 
 @Injectable()
-export class UsersService {}
+export class UsersService {
+	constructor(
+		@InjectRepository(User)
+		private readonly usersRepository: Repository<User>,
+	) {}
+
+	async getProfile(userId: string): Promise<PublicUser> {
+		const user = await this.usersRepository.findOneBy({ id: userId })
+
+		if (!user) {
+			throw new UnauthorizedException()
+		}
+
+		return toPublicUser(user)
+	}
+}
