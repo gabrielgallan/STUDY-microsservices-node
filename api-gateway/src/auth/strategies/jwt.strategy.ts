@@ -1,18 +1,24 @@
-import { UnauthorizedException } from '@nestjs/common'
-import { Injectable } from '@nestjs/common/decorators/core/injectable.decorator'
+import { Injectable, UnauthorizedException } from '@nestjs/common'
 import { PassportStrategy } from '@nestjs/passport'
 import { ExtractJwt, Strategy } from 'passport-jwt'
+import type { Request } from 'express'
 import z from 'zod'
 import { EnvService } from '../../env/env.service'
 import { AuthService } from '../services/auth.service'
 
-const payloadSchema = z.object({
-	userId: z.uuid(),
+const jwtPayloadSchema = z.object({
+	sub: z.uuid(),
 	email: z.email(),
-	role: z.string(),
+	role: z.enum(['seller', 'buyer']),
 })
 
-export type UserPayload = z.infer<typeof payloadSchema>
+const userPayloadSchema = z.object({
+	userId: z.uuid(),
+	email: z.email(),
+	role: z.enum(['seller', 'buyer']),
+})
+
+export type UserPayload = z.infer<typeof userPayloadSchema>
 
 @Injectable()
 export class JwtStrategy extends PassportStrategy(Strategy) {
@@ -24,20 +30,25 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
 			jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
 			ignoreExpiration: false,
 			secretOrKey: env.get('JWT_SECRET'),
+			passReqToCallback: true,
 		})
 	}
 
-	async validate(payload: UserPayload) {
-		if (!payload) {
+	async validate(request: Request, payload: unknown): Promise<UserPayload> {
+		const parsedPayload = jwtPayloadSchema.safeParse(payload)
+		const authorization = request.headers.authorization
+
+		if (!parsedPayload.success || !authorization) {
 			throw new UnauthorizedException('Invalid token payload')
 		}
 
-		const { user } = await this.authService.validateJwtToken(payload)
+		const identity = await this.authService.validateJwtToken(authorization)
+		const parsedIdentity = userPayloadSchema.safeParse(identity)
 
-		if (!user) {
+		if (!parsedIdentity.success) {
 			throw new UnauthorizedException('User not found')
 		}
 
-		return { userId: user.id, email: user.email, role: user.role }
+		return parsedIdentity.data
 	}
 }
