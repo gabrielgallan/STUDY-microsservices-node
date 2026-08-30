@@ -64,51 +64,51 @@ describe('POST /auth/register', () => {
 		await app.close()
 	})
 
-	it.each([
-		UserRole.SELLER,
-		UserRole.BUYER,
-	])('creates an active %s with a bcrypt password and public response', async (role) => {
-		const rawEmail = `  ${role}-${runId}@Example.Invalid  `
-		const normalizedEmail = trackEmail(rawEmail)
-		const password = 'password123'
-		const payload = createPayload({
-			email: rawEmail,
-			password,
-			firstName: '  First  ',
-			lastName: '  Last  ',
-			role,
-		})
+	it.each([UserRole.SELLER, UserRole.BUYER])(
+		'creates an active %s with a bcrypt password and public response',
+		async (role) => {
+			const rawEmail = `  ${role}-${runId}@Example.Invalid  `
+			const normalizedEmail = trackEmail(rawEmail)
+			const password = 'password123'
+			const payload = createPayload({
+				email: rawEmail,
+				password,
+				firstName: '  First  ',
+				lastName: '  Last  ',
+				role,
+			})
 
-		const response = await request(app.getHttpServer())
-			.post('/auth/register')
-			.send(payload)
-			.expect(201)
+			const response = await request(app.getHttpServer())
+				.post('/auth/register')
+				.send(payload)
+				.expect(201)
 
-		expect(Object.keys(response.body).sort()).toEqual(publicUserFields)
-		expect(response.body).toMatchObject({
-			email: normalizedEmail,
-			firstName: 'First',
-			lastName: 'Last',
-			role,
-			status: UserStatus.ACTIVE,
-		})
-		expect(response.body.id).toMatch(
-			/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i,
-		)
-		expect(Number.isNaN(Date.parse(response.body.createdAt))).toBe(false)
-		expect(Number.isNaN(Date.parse(response.body.updatedAt))).toBe(false)
-		expect(response.body).not.toHaveProperty('password')
+			expect(Object.keys(response.body).sort()).toEqual(publicUserFields)
+			expect(response.body).toMatchObject({
+				email: normalizedEmail,
+				firstName: 'First',
+				lastName: 'Last',
+				role,
+				status: UserStatus.ACTIVE,
+			})
+			expect(response.body.id).toMatch(
+				/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i,
+			)
+			expect(Number.isNaN(Date.parse(response.body.createdAt))).toBe(false)
+			expect(Number.isNaN(Date.parse(response.body.updatedAt))).toBe(false)
+			expect(response.body).not.toHaveProperty('password')
 
-		const savedUser = await usersRepository.findOneByOrFail({
-			email: normalizedEmail,
-		})
+			const savedUser = await usersRepository.findOneByOrFail({
+				email: normalizedEmail,
+			})
 
-		expect(savedUser.password).not.toBe(password)
-		expect(getRounds(savedUser.password)).toBe(10)
-		expect(await compare(password, savedUser.password)).toBe(true)
-		expect(JSON.stringify(response.body)).not.toContain(password)
-		expect(JSON.stringify(response.body)).not.toContain(savedUser.password)
-	})
+			expect(savedUser.password).not.toBe(password)
+			expect(getRounds(savedUser.password)).toBe(10)
+			expect(await compare(password, savedUser.password)).toBe(true)
+			expect(JSON.stringify(response.body)).not.toContain(password)
+			expect(JSON.stringify(response.body)).not.toContain(savedUser.password)
+		},
+	)
 
 	it.each([
 		['missing email', { email: undefined }, 'email'],

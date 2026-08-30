@@ -86,58 +86,64 @@ describe('POST /auth/login', () => {
 		await app.close()
 	})
 
-	it.each([
-		UserRole.SELLER,
-		UserRole.BUYER,
-	])('logs in an active %s and returns a valid 24-hour JWT', async (role) => {
-		const password = 'password123'
-		const user = await createUser({ label: `active-${role}`, role, password })
-		const originalUpdatedAt = user.updatedAt.getTime()
-		const response = await request(app.getHttpServer())
-			.post('/auth/login')
-			.send({
-				email: `  ${user.email.toUpperCase()}  `,
-				password,
+	it.each([UserRole.SELLER, UserRole.BUYER])(
+		'logs in an active %s and returns a valid 24-hour JWT',
+		async (role) => {
+			const password = 'password123'
+			const user = await createUser({ label: `active-${role}`, role, password })
+			const originalUpdatedAt = user.updatedAt.getTime()
+			const response = await request(app.getHttpServer())
+				.post('/auth/login')
+				.send({
+					email: `  ${user.email.toUpperCase()}  `,
+					password,
+				})
+				.expect(200)
+
+			expect(Object.keys(response.body).sort()).toEqual(['token', 'user'])
+			expect(Object.keys(response.body.user).sort()).toEqual(publicUserFields)
+			expect(response.body.user).toMatchObject({
+				id: user.id,
+				email: user.email,
+				firstName: user.firstName,
+				lastName: user.lastName,
+				role,
+				status: UserStatus.ACTIVE,
 			})
-			.expect(200)
+			expect(typeof response.body.token).toBe('string')
+			expect(response.body.token.length).toBeGreaterThan(0)
+			expect(response.body.user).not.toHaveProperty('password')
 
-		expect(Object.keys(response.body).sort()).toEqual(['token', 'user'])
-		expect(Object.keys(response.body.user).sort()).toEqual(publicUserFields)
-		expect(response.body.user).toMatchObject({
-			id: user.id,
-			email: user.email,
-			firstName: user.firstName,
-			lastName: user.lastName,
-			role,
-			status: UserStatus.ACTIVE,
-		})
-		expect(typeof response.body.token).toBe('string')
-		expect(response.body.token.length).toBeGreaterThan(0)
-		expect(response.body.user).not.toHaveProperty('password')
+			const decoded = await jwtService.verifyAsync<DecodedJwt>(response.body.token)
 
-		const decoded = await jwtService.verifyAsync<DecodedJwt>(response.body.token)
+			expect(Object.keys(decoded).sort()).toEqual([
+				'email',
+				'exp',
+				'iat',
+				'role',
+				'sub',
+			])
+			expect(decoded).toMatchObject({
+				sub: user.id,
+				email: user.email,
+				role,
+			})
+			expect(decoded.exp - decoded.iat).toBe(86_400)
+			await expect(
+				jwtService.verifyAsync(response.body.token, { secret: 'wrong-secret' }),
+			).rejects.toThrow()
 
-		expect(Object.keys(decoded).sort()).toEqual(['email', 'exp', 'iat', 'role', 'sub'])
-		expect(decoded).toMatchObject({
-			sub: user.id,
-			email: user.email,
-			role,
-		})
-		expect(decoded.exp - decoded.iat).toBe(86_400)
-		await expect(
-			jwtService.verifyAsync(response.body.token, { secret: 'wrong-secret' }),
-		).rejects.toThrow()
+			const serializedResponse = JSON.stringify(response.body)
+			expect(serializedResponse).not.toContain(password)
+			expect(serializedResponse).not.toContain(user.password)
+			expect(serializedResponse).not.toContain(jwtSecret)
 
-		const serializedResponse = JSON.stringify(response.body)
-		expect(serializedResponse).not.toContain(password)
-		expect(serializedResponse).not.toContain(user.password)
-		expect(serializedResponse).not.toContain(jwtSecret)
-
-		const unchangedUser = await usersRepository.findOneByOrFail({ id: user.id })
-		expect(unchangedUser.password).toBe(user.password)
-		expect(unchangedUser.status).toBe(user.status)
-		expect(unchangedUser.updatedAt.getTime()).toBe(originalUpdatedAt)
-	})
+			const unchangedUser = await usersRepository.findOneByOrFail({ id: user.id })
+			expect(unchangedUser.password).toBe(user.password)
+			expect(unchangedUser.status).toBe(user.status)
+			expect(unchangedUser.updatedAt.getTime()).toBe(originalUpdatedAt)
+		},
+	)
 
 	it('uses an indistinguishable response for unknown email and wrong password', async () => {
 		const user = await createUser({ label: 'invalid-credentials' })
