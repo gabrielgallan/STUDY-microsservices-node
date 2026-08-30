@@ -38,7 +38,7 @@ async function bootstrap() {
 
 			const allowedOrigins = env.get('CORS_ORIGINS').split(',')
 
-			if (allowedOrigins.includes(origin)) {
+			if (allowedOrigins.includes(origin) || allowedOrigins.includes('*')) {
 				callback(null, true)
 			} else {
 				callback(new Error('Not allowed by CORS'))

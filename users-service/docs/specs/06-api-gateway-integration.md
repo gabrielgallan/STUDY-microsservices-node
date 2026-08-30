@@ -2,7 +2,7 @@
 
 ## Objetivo
 
-Finalizar a integração entre o `users-service` e o `api-gateway`, disponibilizando os contratos necessários para validação de tokens, monitoramento de saúde e documentação da API, e garantindo que os fluxos de autenticação e consulta de usuários funcionem de ponta a ponta pela porta pública do gateway.
+Finalizar a integração entre o `users-service` e o `api-gateway`, disponibilizando os contratos necessários para validação de tokens, monitoramento de saúde e documentação da API, e garantindo que os fluxos de autenticação e consulta de usuários funcionem de ponta a ponta pela porta pública do gateway. A comunicação aplicável do `AuthService` com o `users-service`, incluindo a validação JWT usada pelo `JwtStrategy`, deve utilizar de forma consistente o `ProxyService` existente.
 
 ## Escopo
 
@@ -13,6 +13,7 @@ Esta especificação cobre:
 - a documentação Swagger/OpenAPI do `users-service`;
 - a configuração do endereço do `users-service` no `api-gateway`;
 - a verificação do encaminhamento das rotas de autenticação e usuários;
+- a verificação do uso do `ProxyService` pelo `AuthService` para validar JWTs no `users-service`;
 - a verificação do repasse do header `Authorization`;
 - a validação E2E dos fluxos de registro, login, perfil e listagem de vendedores através do gateway.
 
@@ -88,7 +89,14 @@ Quando o `users-service` estiver disponível, `GET /health` deve retornar HTTP `
 - O gateway deve encaminhar corretamente ao `users-service` as requisições protegidas aplicáveis em `/users/*`.
 - O método HTTP, o caminho funcional, o corpo da requisição e os dados necessários ao contrato de cada operação devem chegar ao `users-service` sem alteração de significado.
 - O status HTTP e o corpo produzidos pelo fluxo integrado devem ser devolvidos ao cliente de acordo com o contrato da operação solicitada.
-- A integração deve utilizar a infraestrutura de proxy já existente, preservando circuit breaker, retry e timeout.
+- Toda comunicação aplicável do `AuthService` com o `users-service` deve utilizar o `ProxyService` existente.
+- `POST /auth/login` e `POST /auth/register` devem continuar sendo encaminhados pelo `ProxyService`.
+- `AuthService.validateJwtToken`, utilizado pelo `JwtStrategy`, deve encaminhar `GET /auth/validate-token` ao `users-service` por meio do `ProxyService`.
+- A chamada de `AuthService.validateJwtToken` deve incluir o header `Authorization` original recebido pelo gateway.
+- A integração deve utilizar a infraestrutura de proxy já existente, preservando circuit breaker, retry, timeout e fallback.
+- Respostas HTTP `4xx` do `users-service`, incluindo HTTP `401` na validação JWT, devem ser preservadas pelo proxy e não devem acionar retry nem fallback.
+- Chamadas de health check não estão sujeitas à obrigatoriedade de uso do `ProxyService` definida neste requisito, pois pertencem à infraestrutura específica de monitoramento.
+- `AuthService.validateSessionToken` e qualquer comunicação relacionada ao gerenciamento ou à validação de sessão permanecem fora do escopo desta especificação.
 - Esta integração não deve substituir, duplicar ou alterar o mecanismo de proxy existente.
 
 ### RF-GW-03 — Autenticação e repasse do Authorization
@@ -96,9 +104,15 @@ Quando o `users-service` estiver disponível, `GET /health` deve retornar HTTP `
 - As rotas públicas de registro e login devem continuar acessíveis pelo gateway sem JWT.
 - As rotas protegidas de usuários devem continuar sujeitas à validação JWT já existente no gateway.
 - O JWT emitido pelo login do `users-service` e devolvido pelo gateway deve ser aceito nas requisições protegidas subsequentes durante seu período de validade.
-- O gateway deve repassar ao `users-service` o header `Authorization` recebido em uma requisição protegida, preservando o esquema Bearer e o token.
+- Para validar uma requisição protegida, o `JwtStrategy` deve solicitar a validação a `AuthService.validateJwtToken`, que deve consultar `GET /auth/validate-token` no `users-service` por meio do `ProxyService`.
+- O gateway deve repassar ao `users-service` o header `Authorization` recebido em uma requisição protegida, tanto na chamada interna de validação JWT quanto no encaminhamento da operação protegida.
+- O valor do header `Authorization` deve ser repassado integralmente, sem qualquer alteração do esquema Bearer ou do token.
 - O `users-service` deve receber e validar o mesmo JWT apresentado pelo cliente ao gateway.
-- Uma requisição protegida sem token ou com token inválido deve retornar HTTP `401` e não deve produzir os dados da rota solicitada.
+- Um JWT válido deve resultar na identidade validada retornada pelo `users-service`, conforme o contrato de `GET /auth/validate-token`.
+- Somente uma resposta HTTP `200` válida do `users-service`, contendo integralmente a identidade definida neste contrato, pode ser aceita como identidade autenticada.
+- Uma requisição protegida sem token ou com token inválido, malformado ou expirado deve retornar HTTP `401` e não deve produzir os dados da rota solicitada.
+- Respostas de fallback, valores vazios, respostas incompletas ou qualquer resposta inesperada não podem ser interpretados como identidade autenticada.
+- A indisponibilidade do `users-service`, inclusive quando resultar em falha ou fallback do proxy, nunca pode autorizar uma requisição protegida.
 - O comportamento dos guards JWT e Session existentes no gateway não deve ser alterado por esta integração.
 - Nenhum gerenciamento de sessão deve ser criado ou ampliado.
 
@@ -113,32 +127,36 @@ Quando o `users-service` estiver disponível, `GET /health` deve retornar HTTP `
 ### Fluxo 1 — Registro
 
 1. O cliente envia `POST /auth/register` ao `api-gateway` na porta `3005`, sem autenticação.
-2. O gateway encaminha a operação ao endpoint de registro do `users-service` na porta `3001`.
+2. O `AuthService` do gateway encaminha a operação ao endpoint de registro do `users-service` na porta `3001` por meio do `ProxyService`.
 3. O `users-service` registra o usuário conforme o contrato já existente.
 4. O gateway devolve ao cliente o resultado do registro.
 
 ### Fluxo 2 — Login
 
 1. O cliente envia `POST /auth/login` ao `api-gateway` na porta `3005`, sem autenticação.
-2. O gateway encaminha a operação ao endpoint de login do `users-service` na porta `3001`.
+2. O `AuthService` do gateway encaminha a operação ao endpoint de login do `users-service` na porta `3001` por meio do `ProxyService`.
 3. O `users-service` autentica as credenciais e emite o JWT conforme o contrato já existente.
 4. O gateway devolve ao cliente o token JWT e os demais dados previstos pelo contrato de login.
 
 ### Fluxo 3 — Perfil autenticado
 
 1. O cliente envia `GET /users/profile` ao `api-gateway` na porta `3005` com o token do login no header `Authorization`.
-2. O gateway valida o JWT com o mecanismo de autenticação já existente.
-3. O gateway encaminha a requisição e o header `Authorization` ao `users-service`.
-4. O `users-service` valida o JWT e retorna o perfil do usuário autenticado conforme o contrato já existente.
-5. O gateway devolve o perfil ao cliente.
+2. O `JwtStrategy` solicita a `AuthService.validateJwtToken` a validação do JWT.
+3. `AuthService.validateJwtToken` encaminha `GET /auth/validate-token` ao `users-service` por meio do `ProxyService`, com o valor original do header `Authorization`.
+4. O `users-service` valida o JWT e devolve a identidade autenticada conforme o contrato de validação de token.
+5. Somente após receber uma identidade válida, o gateway encaminha a requisição de perfil e o header `Authorization` inalterado ao `users-service`.
+6. O `users-service` retorna o perfil do usuário autenticado conforme o contrato já existente.
+7. O gateway devolve o perfil ao cliente.
 
 ### Fluxo 4 — Vendedores ativos
 
 1. O cliente envia `GET /users/sellers` ao `api-gateway` na porta `3005` com o token do login no header `Authorization`.
-2. O gateway valida o JWT com o mecanismo de autenticação já existente.
-3. O gateway encaminha a requisição e o header `Authorization` ao `users-service`.
-4. O `users-service` valida o JWT e retorna a lista de vendedores ativos conforme o contrato já existente.
-5. O gateway devolve a lista ao cliente, incluindo uma lista vazia quando não houver vendedores ativos.
+2. O `JwtStrategy` solicita a `AuthService.validateJwtToken` a validação do JWT.
+3. `AuthService.validateJwtToken` encaminha `GET /auth/validate-token` ao `users-service` por meio do `ProxyService`, com o valor original do header `Authorization`.
+4. O `users-service` valida o JWT e devolve a identidade autenticada conforme o contrato de validação de token.
+5. Somente após receber uma identidade válida, o gateway encaminha a requisição de vendedores e o header `Authorization` inalterado ao `users-service`.
+6. O `users-service` retorna a lista de vendedores ativos conforme o contrato já existente.
+7. O gateway devolve a lista ao cliente, incluindo uma lista vazia quando não houver vendedores ativos.
 
 ## Cenário E2E obrigatório
 
@@ -151,7 +169,12 @@ O fluxo integrado deve ser testável com o `users-service` executando na porta `
 5. Utilizar o mesmo JWT para consultar `/users/sellers` exclusivamente pelo gateway.
 6. Confirmar que a consulta retorna apenas vendedores ativos ou uma lista vazia.
 7. Confirmar que `/users/profile` e `/users/sellers` retornam `401` pelo gateway quando o JWT não é apresentado ou é inválido.
-8. Confirmar que o header `Authorization` chega ao `users-service` nas duas consultas protegidas.
+8. Confirmar que registro e login continuam sendo encaminhados ao `users-service` por meio do `ProxyService`.
+9. Confirmar que, antes do encaminhamento de cada consulta protegida, `AuthService.validateJwtToken` encaminha `GET /auth/validate-token` ao `users-service` por meio do `ProxyService`.
+10. Confirmar que o valor integral do header `Authorization` apresentado ao gateway chega inalterado ao `users-service` na validação JWT e no encaminhamento das duas consultas protegidas.
+11. Confirmar que uma identidade somente é aceita pelo gateway após uma resposta HTTP `200` válida de `GET /auth/validate-token` produzida pelo `users-service`.
+12. Confirmar que respostas HTTP `401` da validação JWT são preservadas pelo `ProxyService` e devolvidas pelo gateway sem retry nem fallback.
+13. Confirmar que falhas, indisponibilidade do `users-service`, respostas vazias, respostas inesperadas ou fallbacks do proxy não autenticam o usuário e não permitem o encaminhamento da rota protegida.
 
 ## Critérios de aceite
 
@@ -161,20 +184,28 @@ O fluxo integrado deve ser testável com o `users-service` executando na porta `
 4. A documentação automática do `users-service` está acessível em `/api` com título `Users Service`, versão `1.0` e suporte a Bearer Auth.
 5. O ambiente local do `api-gateway` define `USERS_SERVICE_URL=http://localhost:3001`.
 6. O health check existente do gateway identifica o `users-service` como saudável quando o serviço está disponível e responde ao contrato definido.
-7. `POST /auth/register` na porta `3005` registra um usuário no `users-service` sem exigir JWT.
-8. `POST /auth/login` na porta `3005` autentica o usuário no `users-service` e devolve um JWT utilizável.
-9. `GET /users/profile` na porta `3005`, com o JWT emitido pelo login, retorna HTTP `200` com o perfil correto.
-10. `GET /users/sellers` na porta `3005`, com o JWT emitido pelo login, retorna HTTP `200` com todos e somente os vendedores ativos, ou uma lista vazia.
-11. O header `Authorization` recebido pelo gateway é repassado ao `users-service` sem perda ou alteração do token.
-12. As rotas protegidas retornam HTTP `401` quando chamadas pelo gateway sem JWT ou com JWT inválido.
-13. O cenário E2E obrigatório é executável integralmente pela porta `3005`, sem acesso direto do cliente aos endpoints de registro, login, perfil ou vendedores na porta `3001`.
-14. O mecanismo de proxy, circuit breaker, retry, timeout e os guards existentes no gateway permanecem inalterados.
-15. Nenhum mecanismo ou endpoint de gerenciamento de sessão é implementado.
+7. `POST /auth/register` na porta `3005` registra um usuário no `users-service` sem exigir JWT e continua sendo encaminhado pelo `ProxyService`.
+8. `POST /auth/login` na porta `3005` autentica o usuário no `users-service`, continua sendo encaminhado pelo `ProxyService` e devolve um JWT utilizável.
+9. `AuthService.validateJwtToken`, quando acionado pelo `JwtStrategy`, encaminha `GET /auth/validate-token` ao `users-service` exclusivamente por meio do `ProxyService`.
+10. O valor integral do header `Authorization` recebido pelo gateway é repassado ao `users-service` na chamada interna de validação JWT e no encaminhamento da rota protegida, sem alteração do esquema Bearer ou do token.
+11. Uma identidade somente é aceita pelo gateway quando `GET /auth/validate-token` retorna HTTP `200` com `userId`, `email` e `role` válidos; respostas vazias, incompletas, inesperadas ou de fallback não autenticam o usuário.
+12. A resposta HTTP `401` de `GET /auth/validate-token` para JWT ausente, inválido, malformado ou expirado é preservada pelo `ProxyService`, sem retry nem fallback, e a rota protegida não é encaminhada.
+13. Falha, indisponibilidade ou fallback decorrente da comunicação com o `users-service` nunca autoriza a requisição nem permite o encaminhamento da rota protegida.
+14. `GET /users/profile` na porta `3005`, após a validação bem-sucedida do JWT pelo fluxo `JwtStrategy`, `AuthService` e `ProxyService`, retorna HTTP `200` com o perfil correto.
+15. `GET /users/sellers` na porta `3005`, após a validação bem-sucedida do JWT pelo fluxo `JwtStrategy`, `AuthService` e `ProxyService`, retorna HTTP `200` com todos e somente os vendedores ativos, ou uma lista vazia.
+16. As rotas protegidas retornam HTTP `401` quando chamadas pelo gateway sem JWT ou com JWT inválido, malformado ou expirado.
+17. O cenário E2E obrigatório é executável integralmente pela porta `3005`, sem acesso direto do cliente aos endpoints de registro, login, perfil ou vendedores na porta `3001`.
+18. Chamadas de health check permanecem sob a infraestrutura específica de monitoramento e não são obrigadas a utilizar o `ProxyService`.
+19. O mecanismo de proxy, circuit breaker, retry, timeout, fallback e os guards existentes no gateway permanecem inalterados.
+20. `AuthService.validateSessionToken` e o gerenciamento e a validação de sessão permanecem fora do escopo, e nenhum mecanismo ou endpoint de gerenciamento de sessão é implementado.
 
 ## Rastreabilidade da implementação
 
 - Cada conjunto funcional deve ser entregue em commit granular e identificável.
 - O endpoint de validação de token e seus testes devem formar uma implementação rastreável.
+- O encaminhamento de `GET /auth/validate-token` por `AuthService.validateJwtToken` através do `ProxyService` deve possuir testes rastreáveis que verifiquem o repasse inalterado do header `Authorization`.
+- Os testes da validação JWT pelo proxy devem verificar a aceitação exclusiva de uma identidade válida, a preservação de HTTP `401` e a rejeição de falhas, respostas inesperadas e fallbacks.
+- A continuidade do encaminhamento de registro e login pelo `ProxyService` deve possuir verificações rastreáveis.
 - O endpoint de saúde e seus testes devem formar uma implementação rastreável.
 - A configuração Swagger/OpenAPI e suas verificações devem formar uma implementação rastreável.
 - A configuração e as verificações de integração do gateway devem formar uma implementação rastreável.
