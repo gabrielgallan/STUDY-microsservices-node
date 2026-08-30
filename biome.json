@@ -16,6 +16,9 @@
 			},
 			"style": {
 				"useImportType": "off"
+			},
+			"complexity": {
+				"noStaticOnlyClass": "off"
 			}
 		}
 	},
@@ -24,6 +27,9 @@
 			"quoteStyle": "single",
 			"semicolons": "asNeeded",
 			"trailingCommas": "all"
+		},
+		"parser": {
+			"unsafeParameterDecoratorsEnabled": true
 		}
 	}
 }
