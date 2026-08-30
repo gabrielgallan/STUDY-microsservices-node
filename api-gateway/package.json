@@ -9,7 +9,7 @@
 		"start:debug": "nest start --debug --watch",
 		"start:prod": "node --env-file=.env dist/src/main",
 		"test": "pnpm run test:e2e",
-		"pretest:e2e": "pnpm --dir ../users-service run build && pnpm --dir ../products-service run build && pnpm --dir ../checkout-service run build && pnpm run build",
+		"pretest:e2e": "pnpm --dir ../users-service run build && pnpm --dir ../products-service run build && pnpm --dir ../checkout-service run build && pnpm --dir ../payments-service run build && pnpm run build",
 		"test:e2e": "jest --config ./test/jest-e2e.json --runInBand"
 	},
 	"dependencies": {

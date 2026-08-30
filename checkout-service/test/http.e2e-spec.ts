@@ -114,23 +114,6 @@ describe('Checkout HTTP infrastructure (e2e)', () => {
 			.expect(200, { public: true })
 	})
 
-	it('keeps the existing payment test route protected and its fixture valid', async () => {
-		await request(app.getHttpServer()).post('/test/send-payment').expect(401)
-		await request(app.getHttpServer())
-			.post('/test/send-payment')
-			.set('Authorization', `Bearer ${createValidToken()}`)
-			.expect(201, { status: 'success' })
-
-		expect(publishMessage).toHaveBeenCalledWith(
-			'payments',
-			'payment.order',
-			expect.objectContaining({
-				amount: 100,
-				metadata: expect.objectContaining({ service: 'checkout-service' }),
-			}),
-		)
-	})
-
 	it('serves Swagger with service metadata and Bearer JWT', async () => {
 		await request(app.getHttpServer()).get('/api').expect(200)
 		const response = await request(app.getHttpServer()).get('/api-json').expect(200)

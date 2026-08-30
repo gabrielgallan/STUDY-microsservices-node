@@ -11,6 +11,7 @@ import { EnvService } from './env/env.service'
 import { CustomThrottlerGuard } from './guards/throttler.guard'
 import { LoggingMiddleware } from './middleware/logging/logging.middleware'
 import { MiddlewareModule } from './middleware/middleware.module'
+import { PaymentsModule } from './payments/payments.module'
 import { GatewayProductsModule } from './products/products.module'
 import { ProxyModule } from './proxy/proxy.module'
 import { GatewayUsersModule } from './users/users.module'
@@ -47,6 +48,7 @@ import { GatewayUsersModule } from './users/users.module'
 		GatewayUsersModule,
 		GatewayProductsModule,
 		CheckoutModule,
+		PaymentsModule,
 		ProxyModule,
 		MiddlewareModule,
 		HealthModule,

@@ -7,7 +7,6 @@ import { AuthModule } from './auth/auth.module'
 import { JwtAuthGuard } from './auth/guards/jwt-auth.guard'
 import { CartModule } from './cart/cart.module'
 import { databaseConfig } from './config/database.config'
-import { TestController } from './controllers/test.controller'
 import { envSchema } from './env/env'
 import { EnvModule } from './env/env.module'
 import { EventsModule } from './events/events.module'
@@ -28,7 +27,6 @@ import { OrdersModule } from './orders/orders.module'
 		AuthModule,
 		HealthModule,
 	],
-	controllers: [TestController],
 	providers: [
 		{
 			provide: APP_GUARD,
