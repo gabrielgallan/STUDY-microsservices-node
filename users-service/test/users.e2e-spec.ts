@@ -6,7 +6,9 @@ import { ZodValidationPipe } from 'nestjs-zod'
 import request from 'supertest'
 import type { Repository } from 'typeorm'
 import { AppModule } from '../src/app.module'
+import { IS_PUBLIC_KEY } from '../src/auth/decorators/public.decorator'
 import { User, UserRole, UserStatus } from '../src/users/entities/user.entity'
+import { UsersController } from '../src/users/users.controller'
 
 const publicUserFields = [
 	'createdAt',
@@ -240,5 +242,46 @@ describe('Users queries', () => {
 			expect(response.body.statusCode).toBe(400)
 			expect(response.body.message).toContain('uuid')
 		})
+	})
+
+	describe('JWT protection', () => {
+		const protectedPaths = [
+			'/users/profile',
+			'/users/sellers',
+			'/users/6d45939e-0529-4cb6-b63a-f73271feb506',
+		]
+
+		it.each(protectedPaths)('returns 401 for %s without a token', async (path) => {
+			const response = await request(app.getHttpServer()).get(path).expect(401)
+
+			expect(response.body).toEqual({
+				message: 'Unauthorized',
+				statusCode: 401,
+			})
+		})
+
+		it.each(protectedPaths)(
+			'returns 401 for %s with an invalid token',
+			async (path) => {
+				const response = await request(app.getHttpServer())
+					.get(path)
+					.set('Authorization', 'Bearer invalid-token')
+					.expect(401)
+
+				expect(response.body).toEqual({
+					message: 'Unauthorized',
+					statusCode: 401,
+				})
+			},
+		)
+
+		it.each(['getProfile', 'getActiveSellers', 'getById'] as const)(
+			'does not mark UsersController.%s as public',
+			(handler) => {
+				expect(
+					Reflect.getMetadata(IS_PUBLIC_KEY, UsersController.prototype[handler]),
+				).toBeUndefined()
+			},
+		)
 	})
 })
