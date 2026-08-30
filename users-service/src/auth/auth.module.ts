@@ -11,6 +11,7 @@ import { JwtStrategy } from './strategies/jwt.strategy'
 @Module({
 	imports: [
 		UsersModule,
+		EnvModule,
 		PassportModule,
 		JwtModule.registerAsync({
 			imports: [EnvModule],
