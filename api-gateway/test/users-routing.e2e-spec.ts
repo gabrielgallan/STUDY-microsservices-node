@@ -1,4 +1,10 @@
-import type { CanActivate, ExecutionContext, INestApplication } from '@nestjs/common'
+import {
+	type CanActivate,
+	type ExecutionContext,
+	HttpException,
+	type INestApplication,
+} from '@nestjs/common'
+import { JwtService } from '@nestjs/jwt'
 import { Test } from '@nestjs/testing'
 import { ZodValidationPipe } from 'nestjs-zod'
 import request from 'supertest'
@@ -99,12 +105,7 @@ describe('Gateway users-service routing', () => {
 			.expect(200)
 
 		expect(response.body).toEqual(loginResponse)
-		expect(proxyRequest).toHaveBeenCalledWith(
-			'users',
-			'post',
-			'/auth/login',
-			payload,
-		)
+		expect(proxyRequest).toHaveBeenCalledWith('users', 'post', '/auth/login', payload)
 	})
 
 	it.each([
@@ -170,4 +171,134 @@ describe('Gateway users route protection', () => {
 				.expect(401)
 		},
 	)
+})
+
+describe('Gateway JWT validation through ProxyService', () => {
+	let app: INestApplication
+	let jwtService: JwtService
+	const proxyRequest = jest.fn()
+
+	beforeAll(async () => {
+		const testingModule = await Test.createTestingModule({
+			imports: [AppModule],
+		})
+			.overrideProvider(ProxyService)
+			.useValue({ proxyRequest })
+			.compile()
+
+		app = testingModule.createNestApplication()
+		app.useGlobalPipes(new ZodValidationPipe())
+		await app.init()
+
+		jwtService = app.get(JwtService)
+	})
+
+	beforeEach(() => {
+		proxyRequest.mockReset()
+	})
+
+	afterAll(async () => {
+		await app.close()
+	})
+
+	const createAuthorization = () => {
+		const token = jwtService.sign({
+			sub: identity.userId,
+			email: identity.email,
+			role: identity.role,
+		})
+
+		return `Bearer ${token}`
+	}
+
+	it.each([
+		['profile', '/users/profile', '/users/profile', { id: identity.userId }],
+		['sellers', '/users/sellers', '/users/sellers', [identity]],
+	])(
+		'validates JWT through the proxy before forwarding %s',
+		async (_case, publicPath, servicePath, serviceResponse) => {
+			const authorization = createAuthorization()
+			proxyRequest
+				.mockResolvedValueOnce(identity)
+				.mockResolvedValueOnce(serviceResponse)
+
+			const response = await request(app.getHttpServer())
+				.get(publicPath)
+				.set('Authorization', authorization)
+				.expect(200)
+
+			expect(response.body).toEqual(serviceResponse)
+			expect(proxyRequest).toHaveBeenCalledTimes(2)
+			expect(proxyRequest).toHaveBeenNthCalledWith(
+				1,
+				'users',
+				'get',
+				'/auth/validate-token',
+				undefined,
+				{ Authorization: authorization },
+			)
+			expect(proxyRequest).toHaveBeenNthCalledWith(
+				2,
+				'users',
+				'get',
+				servicePath,
+				undefined,
+				{ Authorization: authorization },
+				identity,
+			)
+		},
+	)
+
+	it.each([
+		['an empty response', null],
+		['an incomplete identity', { userId: identity.userId }],
+		['an invalid identity', { ...identity, role: 'admin' }],
+		['a fallback response', 'Service unavailable. Please try again later.'],
+	])('does not authenticate from %s', async (_case, validationResponse) => {
+		const authorization = createAuthorization()
+		proxyRequest.mockResolvedValueOnce(validationResponse)
+
+		await request(app.getHttpServer())
+			.get('/users/profile')
+			.set('Authorization', authorization)
+			.expect(401)
+
+		expect(proxyRequest).toHaveBeenCalledTimes(1)
+		expect(proxyRequest).toHaveBeenCalledWith(
+			'users',
+			'get',
+			'/auth/validate-token',
+			undefined,
+			{ Authorization: authorization },
+		)
+	})
+
+	it('preserves a downstream 401 and does not forward the protected route', async () => {
+		const authorization = createAuthorization()
+		const downstreamResponse = {
+			statusCode: 401,
+			message: 'Unauthorized',
+		}
+		proxyRequest.mockRejectedValueOnce(new HttpException(downstreamResponse, 401))
+
+		const response = await request(app.getHttpServer())
+			.get('/users/profile')
+			.set('Authorization', authorization)
+			.expect(401)
+
+		expect(response.body).toEqual(downstreamResponse)
+		expect(proxyRequest).toHaveBeenCalledTimes(1)
+	})
+
+	it('fails closed when JWT validation through the proxy fails', async () => {
+		const authorization = createAuthorization()
+		proxyRequest.mockRejectedValueOnce(new Error('users-service unavailable'))
+
+		await request(app.getHttpServer())
+			.get('/users/profile')
+			.set('Authorization', authorization)
+			.expect(500)
+
+		expect(proxyRequest).toHaveBeenCalledTimes(1)
+	})
 })
