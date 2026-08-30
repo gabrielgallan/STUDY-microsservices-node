@@ -1,6 +1,8 @@
 import 'dotenv/config'
 import z from 'zod'
 
+const nonEmptyStringSchema = z.string().trim().min(1)
+
 export const envSchema = z.object({
 	NODE_ENV: z.enum(['development', 'test', 'production']).default('production'),
 	PORT: z.coerce.number().default(3003),
@@ -11,7 +13,7 @@ export const envSchema = z.object({
 	DB_PASSWORD: z.string().default('docker'),
 	DB_DATABASE: z.string().default('checkout'),
 
-	JWT_SECRET: z.string(),
+	JWT_SECRET: nonEmptyStringSchema,
 	JWT_EXPIRES_IN: z.string().default('1h'),
 
 	USERS_SERVICE_URL: z.url().default('http://localhost:3001'),

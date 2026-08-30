@@ -9,12 +9,12 @@ export class TestController {
 	@Post('send-payment')
 	async testPayment() {
 		const paymentOrder: PaymentOrderMessage = {
-			orderId: '12345',
-			userId: 'user-001',
-			amount: -100,
+			orderId: '20dcbb35-2685-4547-a7b0-2929b720589a',
+			userId: '07ad3bed-9b52-4ec0-a79f-70b2a55c290c',
+			amount: 100,
 			items: [
 				{
-					productId: 'prod-001',
+					productId: '9884e844-1496-4cb8-8d73-a9dbce564f61',
 					quantity: 1,
 					price: 100.0,
 				},

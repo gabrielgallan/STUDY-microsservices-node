@@ -1,5 +1,8 @@
 import { Injectable, Logger, OnModuleInit } from '@nestjs/common'
-import { PaymentOrderMessage } from '../payment-queue/payment-queue.interface'
+import {
+	PaymentOrderMessage,
+	publishedPaymentOrderMessageSchema,
+} from '../payment-queue/payment-queue.interface'
 import { PaymentsQueueService } from '../payment-queue/payments-queue.service'
 import { RabbitmqService } from '../rabbitmq/rabbitmq.service'
 
@@ -75,18 +78,21 @@ export class PaymentConsumerService implements OnModuleInit {
 		const startTime = Date.now()
 
 		try {
-			this.logger.log(
-				`Processing payment order: ` +
-					`orderId=${message.orderId}, ` +
-					`userId=${message.userId}, ` +
-					`amount=${message.amount}`,
-			)
+			const result = publishedPaymentOrderMessageSchema.safeParse(message)
 
-			if (!this.validateMessage(message)) {
+			if (!result.success) {
 				this.logger.error('Invalid payment message received')
-
 				throw new Error('Invalid payment message')
 			}
+
+			const paymentOrder = result.data
+
+			this.logger.log(
+				`Processing payment order: ` +
+					`orderId=${paymentOrder.orderId}, ` +
+					`userId=${paymentOrder.userId}, ` +
+					`amount=${paymentOrder.amount}`,
+			)
 
 			this.logger.log('Payment order received and validated')
 
@@ -101,35 +107,6 @@ export class PaymentConsumerService implements OnModuleInit {
 
 			throw error
 		}
-	}
-
-	private validateMessage(message: PaymentOrderMessage) {
-		if (!message.orderId) {
-			this.logger.error('Missing orderId in payment message')
-			return false
-		}
-
-		if (!message.userId) {
-			this.logger.error('Missing userId in payment message')
-			return false
-		}
-
-		if (!message.amount || message.amount <= 0) {
-			this.logger.error('Invalid amount in payment message')
-			return false
-		}
-
-		if (!message.paymentMethod) {
-			this.logger.error('Missing paymentMethod in payment message')
-			return false
-		}
-
-		if (!message.items || message.items.length === 0) {
-			this.logger.error('No items in payment message')
-			return false
-		}
-
-		return true
 	}
 
 	private updateMetrics(success: boolean, startTime: number): void {

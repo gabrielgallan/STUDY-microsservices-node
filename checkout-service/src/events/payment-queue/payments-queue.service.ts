@@ -3,6 +3,7 @@ import { RabbitmqService } from '../rabbitmq/rabbitmq.service'
 import {
 	PaymentOrderMessage,
 	paymentOrderMessageSchema,
+	publishedPaymentOrderMessageSchema,
 } from './payment-queue.interface'
 
 @Injectable()
@@ -15,17 +16,27 @@ export class PaymentsQueueService {
 	constructor(private rabbitmq: RabbitmqService) {}
 
 	async publishPaymentOrder(paymentOrder: PaymentOrderMessage) {
-		this.logger.log(`Publishing payment order: ${JSON.stringify(paymentOrder)}`)
+		const parsedPaymentOrder = paymentOrderMessageSchema.safeParse(paymentOrder)
+
+		if (!parsedPaymentOrder.success) {
+			this.logger.error('Failed to validate payment order')
+			throw new Error('Invalid payment order')
+		}
+
+		this.logger.log(
+			`Publishing payment order: ${JSON.stringify(parsedPaymentOrder.data)}`,
+		)
 
 		try {
-			const enrichmentMessage: PaymentOrderMessage = {
-				...paymentOrder,
-				createdAt: paymentOrder.createdAt || new Date().toISOString(),
+			const enrichmentMessage = publishedPaymentOrderMessageSchema.parse({
+				...parsedPaymentOrder.data,
+				createdAt:
+					parsedPaymentOrder.data.createdAt || new Date().toISOString(),
 				metadata: {
 					service: 'checkout-service',
 					timestamp: new Date().toISOString(),
 				},
-			}
+			})
 
 			await this.rabbitmq.publishMessage(
 				this.EXCHANGE,
@@ -44,22 +55,16 @@ export class PaymentsQueueService {
 	}
 
 	async validatePaymentOrder(paymentOrder: PaymentOrderMessage): Promise<boolean> {
-		try {
-			await paymentOrderMessageSchema.parseAsync(paymentOrder)
-			return true
-		} catch (error) {
-			this.logger.error('Failed to validate payment order', error)
-			return false
+		const result = await paymentOrderMessageSchema.safeParseAsync(paymentOrder)
+
+		if (!result.success) {
+			this.logger.error('Failed to validate payment order')
 		}
+
+		return result.success
 	}
 
 	async publishPaymentOrderSafely(paymentOrder: PaymentOrderMessage) {
-		// const isValid = await this.validatePaymentOrder(paymentOrder)
-
-		// if (!isValid) {
-		// 	throw new Error('Invalid payment order')
-		// }
-
 		await this.publishPaymentOrder(paymentOrder)
 	}
 }
