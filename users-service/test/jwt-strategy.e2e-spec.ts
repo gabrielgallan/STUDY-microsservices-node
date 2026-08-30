@@ -7,7 +7,7 @@ describe('JwtStrategy', () => {
 		get: () => 'users-service-e2e-secret',
 	} as unknown as EnvService)
 
-	it('accepts the domain claims and discards technical claims', () => {
+	it('maps valid domain claims to the authenticated identity', () => {
 		const payload = strategy.validate({
 			sub: '9fe4cbf8-4ad8-4a37-bb3e-42f8126076b6',
 			email: 'buyer@example.invalid',
@@ -17,7 +17,7 @@ describe('JwtStrategy', () => {
 		})
 
 		expect(payload).toEqual({
-			sub: '9fe4cbf8-4ad8-4a37-bb3e-42f8126076b6',
+			id: '9fe4cbf8-4ad8-4a37-bb3e-42f8126076b6',
 			email: 'buyer@example.invalid',
 			role: UserRole.BUYER,
 		})
