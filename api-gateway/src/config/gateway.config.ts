@@ -10,7 +10,7 @@ export const serviceConfig = {
 		timeout: 10000,
 	},
 	checkout: {
-		url: process.env.CHECKOUT_SERVICE_URL || 'http://localhost:3002',
+		url: process.env.CHECKOUT_SERVICE_URL || 'http://localhost:3003',
 		timeout: 10000,
 	},
 	payments: {

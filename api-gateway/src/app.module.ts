@@ -3,6 +3,7 @@ import { ConfigModule } from '@nestjs/config'
 import { APP_GUARD } from '@nestjs/core'
 import { ThrottlerModule } from '@nestjs/throttler'
 import { AuthModule } from './auth/auth.module'
+import { CheckoutModule } from './checkout/checkout.module'
 import { HealthModule } from './controllers/health.module'
 import { envSchema } from './env/env'
 import { EnvModule } from './env/env.module'
@@ -45,6 +46,7 @@ import { GatewayUsersModule } from './users/users.module'
 		AuthModule,
 		GatewayUsersModule,
 		GatewayProductsModule,
+		CheckoutModule,
 		ProxyModule,
 		MiddlewareModule,
 		HealthModule,
