@@ -1,12 +1,16 @@
-# messaging-service/README.md
-
 # 📨 Messaging Infrastructure
 
-Infraestrutura de mensageria para o marketplace usando RabbitMQ.
+Messaging infrastructure using RabbitMQ.
 
-## 🚀 Como usar
+## 🚀 How to run
 
-### Subir RabbitMQ
+#### 1. Configure envs and posts as your preference in **docker-compose.yml**
 
+#### 2. Enter the directory
+```bash
+cd messaging-service
+```
+
+#### 3. Run docker compose
 ```bash
 docker-compose up -d

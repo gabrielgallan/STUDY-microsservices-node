@@ -14,7 +14,6 @@ export const envSchema = z.object({
 	DB_DATABASE: z.string().default('checkout'),
 
 	JWT_SECRET: nonEmptyStringSchema,
-	JWT_EXPIRES_IN: z.string().default('1h'),
 
 	USERS_SERVICE_URL: z.url().default('http://localhost:3001'),
 	PRODUCTS_SERVICE_URL: z.url().default('http://localhost:3002'),

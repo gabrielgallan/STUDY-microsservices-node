@@ -12,7 +12,6 @@ export const envSchema = z.object({
 	DB_DATABASE: z.string().default('payments'),
 
 	JWT_SECRET: z.string(),
-	JWT_EXPIRES_IN: z.string().default('1h'),
 
 	USERS_SERVICE_URL: z.url().default('http://localhost:3001'),
 	PRODUCTS_SERVICE_URL: z.url().default('http://localhost:3002'),
@@ -23,7 +22,7 @@ export const envSchema = z.object({
 	RABBITMQ_EXCHANGE: z.string().default('payments'),
 
 	PAYMENT_GATEWAY_URL: z.url(),
-	PAYMENT_GATEWAY_API_KEY: z.string()
+	PAYMENT_GATEWAY_API_KEY: z.string(),
 })
 
 type Env = z.infer<typeof envSchema>
