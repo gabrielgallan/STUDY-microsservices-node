@@ -32,13 +32,26 @@ Beyond synchronous REST calls, the system introduces **event-driven communicatio
 
 # Technologies
 
-- <img src="https://devicons.io/devicons/icons/nodejs-icon.svg" width="22"/> Node.js
-- <img src="https://devicons.io/devicons/icons/nestjs.svg" width="22"/> NestJS
-- <img src="https://devicons.io/devicons/icons/docker-icon.svg" width="22"/> Docker
-- <img src="https://devicons.io/devicons/icons/postgresql.svg" width="22"/> PostgreSQL
-- <img src="https://devicons.io/devicons/icons/jwt-icon.svg" width="22"/> JWT
-- <img src="https://devicons.io/devicons/icons/rabbitmq-icon.svg" width="22"/> RabbitMQ
-
+<div style="display:flex; flex-direction: column; gap: 0.5rem; margin-bottom: 2rem;">
+    <div style="display:flex; align-items:center; gap: 0.5rem;">
+        <img src="https://devicons.io/devicons/icons/nodejs-icon.svg" width="25"/> Node.js
+    </div>
+    <div style="display:flex; align-items:center; gap: 0.5rem;">
+        <img src="https://devicons.io/devicons/icons/nestjs.svg" width="25"/> NestJS    
+    </div>
+    <div style="display:flex; align-items:center; gap: 0.5rem;">
+        <img src="https://devicons.io/devicons/icons/docker-icon.svg" width="25"/> Docker
+    </div>
+    <div style="display:flex; align-items:center; gap: 0.5rem;">
+        <img src="https://devicons.io/devicons/icons/postgresql.svg" width="25"/> PostgreSQL
+    </div>
+    <div style="display:flex; align-items:center; gap: 0.5rem;">
+        <img src="https://devicons.io/devicons/icons/jwt-icon.svg" width="25"/> JWT
+    </div>
+    <div style="display:flex; align-items:center; gap: 0.5rem;">
+        <img src="https://devicons.io/devicons/icons/rabbitmq-icon.svg" width="25"/> RabbitMQ
+    </div>
+</div>
 
 # Documentations
 
