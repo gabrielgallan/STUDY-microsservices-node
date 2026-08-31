@@ -6,11 +6,12 @@ import { EnvService } from './env/env.service'
 
 async function bootstrap() {
 	const app = await NestFactory.create(AppModule)
+
+	const logger = new Logger('Main')
+
 	configureSwagger(app)
 
 	const env = app.get(EnvService)
-
-	const logger = new Logger('Main')
 
 	const port = env.get('PORT')
 

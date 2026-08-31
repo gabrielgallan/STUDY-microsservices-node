@@ -8,7 +8,7 @@
 		"start": "nest start",
 		"start:dev": "nest start --watch",
 		"start:debug": "nest start --debug --watch",
-		"start:prod": "node dist/main",
+		"start:prod": "node --env-file=.env dist/src/main",
 		"test": "pnpm run test:e2e",
 		"test:e2e": "jest --config ./test/jest-e2e.json --runInBand"
 	},
@@ -25,6 +25,7 @@
 		"axios": "1.20.0",
 		"bcryptjs": "3.0.3",
 		"dotenv": "17.4.2",
+		"@scalar/nestjs-api-reference": "1.2.17",
 		"passport": "0.7.0",
 		"passport-jwt": "4.0.1",
 		"pg": "8.23.0",

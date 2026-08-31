@@ -8,7 +8,7 @@
 		"start": "nest start",
 		"start:dev": "nest start --watch",
 		"start:debug": "nest start --debug --watch",
-		"start:prod": "node dist/src/main",
+		"start:prod": "node --env-file=.env dist/src/main",
 		"test": "pnpm run test:e2e",
 		"test:e2e": "jest --config ./test/jest-e2e.json --runInBand"
 	},
@@ -22,6 +22,7 @@
 		"@nestjs/swagger": "11.4.7",
 		"@nestjs/typeorm": "11.0.3",
 		"dotenv": "17.4.2",
+		"@scalar/nestjs-api-reference": "1.2.17",
 		"nestjs-zod": "5.5.0",
 		"passport": "0.7.0",
 		"passport-jwt": "4.0.1",

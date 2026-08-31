@@ -8,11 +8,14 @@ import { EnvService } from './env/env.service'
 async function bootstrap() {
 	const app = await NestFactory.create(AppModule)
 
-	app.useGlobalPipes(new ZodValidationPipe())
-	configureSwagger(app)
+	const logger = new Logger('Main')
 
 	const env = app.get(EnvService)
-	const logger = new Logger('Main')
+
+	app.useGlobalPipes(new ZodValidationPipe())
+
+	configureSwagger(app)
+
 	const port = env.get('PORT')
 
 	try {

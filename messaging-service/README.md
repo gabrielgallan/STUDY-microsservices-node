@@ -1,16 +1,16 @@
-# 📨 Messaging Infrastructure
+# Description
 
 Messaging infrastructure using RabbitMQ.
 
-## 🚀 How to run
+# Running locally
 
-#### 1. Configure envs and posts as your preference in **docker-compose.yml**
-
-#### 2. Enter the directory
+1. Enter the directory
 ```bash
-cd messaging-service
+cd ./messaging-service
 ```
 
-#### 3. Run docker compose
+2. Configure envs and posts as your preference in **docker-compose.yml**
+
+3. Run docker compose
 ```bash
 docker-compose up -d

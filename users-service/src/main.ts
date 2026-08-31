@@ -1,18 +1,21 @@
 import { Logger } from '@nestjs/common'
 import { NestFactory } from '@nestjs/core'
-import { ZodValidationPipe } from 'nestjs-zod'
 import { AppModule } from './app.module'
 import { configureSwagger } from './config/swagger.config'
 import { EnvService } from './env/env.service'
 
 async function bootstrap() {
-	const app = await NestFactory.create(AppModule)
+	const app = await NestFactory.create(AppModule, {
+		logger: ['error', 'warn', 'log', 'verbose', 'debug'],
+		cors: true,
+	})
 
-	app.useGlobalPipes(new ZodValidationPipe())
-	configureSwagger(app)
+	const logger = new Logger('Main')
 
 	const env = app.get(EnvService)
-	const logger = new Logger('Main')
+
+	configureSwagger(app)
+
 	const port = env.get('PORT')
 
 	app
@@ -24,6 +27,7 @@ async function bootstrap() {
 		})
 		.finally(() => {
 			logger.log(`HTTP server running on http://localhost:${port}`)
+			logger.log(`API documentation can be found on http://localhost:${port}/api`)
 		})
 }
 bootstrap()
