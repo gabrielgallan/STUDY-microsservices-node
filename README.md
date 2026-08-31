@@ -6,7 +6,7 @@ A distributed system built as part of the **"Microsserviços com Node"** course,
 
 The system follows a **database-per-service** approach, where each microservice owns and manages its own PostgreSQL database, ensuring loose coupling and independent deployability.
 
-<img width="809" height="438" alt="Screenshot 2026-08-31 163046" src="https://github.com/user-attachments/assets/9838efd9-a906-455d-9b62-5e991b7d92c9" />
+<img width="550" height="320" alt="image" src="https://github.com/user-attachments/assets/2bfad33b-56ae-4855-9d32-eab26a4fed61" />
 
 ### API Gateway
  
@@ -24,7 +24,7 @@ Synchronous communication between services is protected by a set of resilience p
 - **Retry** — automatically retries transient failures before surfacing an error.
 - **Timeout** — enforces maximum wait times for inter-service calls, avoiding thread/resource exhaustion.
 
-<img width="350" height="372" alt="resilience-layers" src="https://github.com/user-attachments/assets/00aac4b4-81fe-48d3-814d-1ef862599910" />
+<img width="441" height="471" alt="image" src="https://github.com/user-attachments/assets/afe4d3ec-e552-47d7-8459-06c62bcb4646" />
 
 ### Observability
  
