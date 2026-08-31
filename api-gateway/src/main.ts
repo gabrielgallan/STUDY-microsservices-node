@@ -1,10 +1,8 @@
 import { Logger } from '@nestjs/common'
 import { NestFactory } from '@nestjs/core'
-import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger'
-import { apiReference } from '@scalar/nestjs-api-reference'
 import helmet from 'helmet'
-import { ZodValidationPipe } from 'nestjs-zod'
 import { AppModule } from './app.module'
+import { configureSwagger } from './config/swagger.config'
 import { EnvService } from './env/env.service'
 
 async function bootstrap() {
@@ -58,52 +56,9 @@ async function bootstrap() {
 		maxAge: 86400,
 	})
 
-	const config = new DocumentBuilder()
-		.setTitle('Marketplace API Gateway')
-		.setDescription('API Gateway for the Marketplace microservices architecture')
-		.setVersion('1.0')
-		.setLicense('MIT', 'https://opensource.org/licenses/MIT')
-		.addBearerAuth({
-			type: 'http',
-			scheme: 'bearer',
-			bearerFormat: 'JWT',
-			name: 'JWT',
-			description: 'Enter JWT token',
-			in: 'header',
-		})
-		.addApiKey({
-			type: 'apiKey',
-			name: 'x-session-token',
-			in: 'header',
-			description: 'Enter session token',
-		})
-		.addTag('Authentication', 'Operations related to authentication')
-		.addTag('Users', 'Operations related to users')
-		.addTag('Products', 'Operations related to products')
-		.addTag('Checkout', 'Operations related to checkout')
-		.addTag('Payments', 'Operations related to payments')
-		.build()
-
-	const document = SwaggerModule.createDocument(app, config)
-
-	const httpAdapter = app.getHttpAdapter()
-
-	httpAdapter.get('/reference/openapi.json', (_, res) => {
-		res.json(document)
-	})
-
-	app.use(
-		'/reference',
-		apiReference({
-			url: '/reference/openapi.json',
-			theme: 'elysiajs',
-			layout: 'modern',
-		}),
-	)
+	configureSwagger(app)
 
 	const logger = new Logger('Main')
-
-	app.useGlobalPipes(new ZodValidationPipe())
 
 	const port = env.get('PORT')
 
@@ -117,9 +72,6 @@ async function bootstrap() {
 		.finally(() => {
 			logger.log(`HTTP server running on http://localhost:${port}`)
 			logger.log(`API reference can be found on http://localhost:${port}/reference`)
-			logger.log(
-				`API openapi.json can be found on http://localhost:${port}/reference/openapi.json`,
-			)
 		})
 }
 bootstrap()
