@@ -2,7 +2,7 @@ import { ApiProperty } from '@nestjs/swagger'
 import { createZodDto } from 'nestjs-zod'
 import z from 'zod'
 
-const registerSchema = z
+export const registerSchema = z
 	.object({
 		email: z.string().trim().toLowerCase().pipe(z.email()),
 		password: z.string().min(6),
@@ -12,7 +12,7 @@ const registerSchema = z
 	})
 	.strict()
 
-type Role = z.infer<typeof registerSchema>['role']
+export type Role = z.infer<typeof registerSchema>['role']
 
 export class RegisterDto extends createZodDto(registerSchema) {
 	@ApiProperty({

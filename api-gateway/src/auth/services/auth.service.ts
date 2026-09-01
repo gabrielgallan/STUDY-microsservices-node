@@ -73,13 +73,13 @@ export class AuthService {
 			throw new UnauthorizedException('Invalid session token')
 		}
 	}
-	async login(loginDto: LoginDto): Promise<LoginResponse> {
-		return (await this.proxyService.proxyRequest(
+	async login(loginDto: LoginDto) {
+		return await this.proxyService.proxyRequest(
 			'users',
 			'post',
 			'/auth/login',
 			loginDto,
-		)) as LoginResponse
+		)
 	}
 
 	async register(registerDto: RegisterDto): Promise<PublicUserResponse> {
