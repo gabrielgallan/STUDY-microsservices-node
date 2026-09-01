@@ -3,11 +3,10 @@ import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger'
 import { Throttle } from '@nestjs/throttler'
 import { ApiExceptionResponseDto } from '../../dtos/api-exeption-response.dto'
 import { ZodValidationPipe } from '../../pipes/zod-validation.pipe'
-import { PublicUserDto } from '../../users/dtos/profile.dto'
 import { Public } from '../decorators/public.decorator'
 import { AuthService } from '../services/auth.service'
 import { LoginDto, LoginResponseDto, loginSchema } from './dtos/login.dto'
-import { RegisterDto, registerSchema } from './dtos/register.dto'
+import { RegisterDto, RegisterResponseDto, registerSchema } from './dtos/register.dto'
 
 @ApiTags('Authentication')
 @Controller('auth')
@@ -26,6 +25,16 @@ export class AuthController {
 		description: 'Invalid data',
 		type: ApiExceptionResponseDto,
 	})
+	@ApiResponse({
+		status: 401,
+		description: 'Invalid credentials or inactive account',
+		type: ApiExceptionResponseDto,
+	})
+	@ApiResponse({
+		status: 429,
+		description: 'Too many requests',
+		type: ApiExceptionResponseDto,
+	})
 	@Post('login')
 	@HttpCode(200)
 	@Throttle({ short: { limit: 5, ttl: 60000 } })
@@ -37,11 +46,21 @@ export class AuthController {
 	@ApiResponse({
 		status: 201,
 		description: 'User registered successfully',
-		type: PublicUserDto,
+		type: RegisterResponseDto,
 	})
 	@ApiResponse({
 		status: 400,
 		description: 'Invalid data',
+		type: ApiExceptionResponseDto,
+	})
+	@ApiResponse({
+		status: 409,
+		description: 'Email already registered',
+		type: ApiExceptionResponseDto,
+	})
+	@ApiResponse({
+		status: 429,
+		description: 'Too many requests',
 		type: ApiExceptionResponseDto,
 	})
 	@Post('register')

@@ -1,6 +1,7 @@
 import { ApiProperty } from '@nestjs/swagger'
 import { createZodDto } from 'nestjs-zod'
 import z from 'zod'
+import { PublicUserDto } from '../../../users/dtos/profile.dto'
 
 export const registerSchema = z
 	.object({
@@ -40,3 +41,5 @@ export class RegisterDto extends createZodDto(registerSchema) {
 	})
 	role!: Role
 }
+
+export class RegisterResponseDto extends PublicUserDto {}
