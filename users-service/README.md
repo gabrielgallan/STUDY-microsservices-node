@@ -1,5 +1,7 @@
 # Description
 
+Microservice responsible for managing platform users. Handles registration, authentication, profile updates, and personal data, exposing endpoints for querying and maintaining account information.
+
 # Running locally
 
 1. Enter the directory
