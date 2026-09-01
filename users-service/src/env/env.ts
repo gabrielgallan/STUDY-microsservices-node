@@ -8,11 +8,7 @@ export const envSchema = z.object({
 	NODE_ENV: z.enum(['development', 'production', 'test']).default('production'),
 	PORT: portSchema.default(3001),
 
-	DB_HOST: nonEmptyStringSchema.default('localhost'),
-	DB_PORT: portSchema.default(5435),
-	DB_USERNAME: nonEmptyStringSchema.default('docker'),
-	DB_PASSWORD: nonEmptyStringSchema.default('docker'),
-	DB_DATABASE: nonEmptyStringSchema.default('users'),
+	DATABASE_URL: z.url().default('postgresql://docker:docker@localhost:5435/users'),
 
 	JWT_SECRET: nonEmptyStringSchema,
 })

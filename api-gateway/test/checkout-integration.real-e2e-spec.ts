@@ -237,11 +237,7 @@ describe('checkout flow through the real api-gateway', () => {
 				NODE_ENV: 'test',
 				PORT: String(USERS_PORT),
 				JWT_SECRET,
-				DB_HOST: '127.0.0.1',
-				DB_PORT: '5435',
-				DB_USERNAME: 'docker',
-				DB_PASSWORD: 'docker',
-				DB_DATABASE: 'users',
+				DATABASE_URL: 'postgresql://docker:docker@127.0.0.1:5435/users',
 			},
 		)
 		await waitForService(`${USERS_URL}/health`, usersService)
@@ -253,11 +249,7 @@ describe('checkout flow through the real api-gateway', () => {
 				NODE_ENV: 'test',
 				PORT: String(PRODUCTS_PORT),
 				JWT_SECRET,
-				DB_HOST: '127.0.0.1',
-				DB_PORT: '5436',
-				DB_USERNAME: 'docker',
-				DB_PASSWORD: 'docker',
-				DB_DATABASE: 'products',
+				DATABASE_URL: 'postgresql://docker:docker@127.0.0.1:5436/products',
 			},
 		)
 		await waitForService(`${PRODUCTS_URL}/health`, productsService)
@@ -269,11 +261,7 @@ describe('checkout flow through the real api-gateway', () => {
 				NODE_ENV: 'test',
 				PORT: String(CHECKOUT_PORT),
 				JWT_SECRET,
-				DB_HOST: '127.0.0.1',
-				DB_PORT: '5433',
-				DB_USERNAME: 'docker',
-				DB_PASSWORD: 'docker',
-				DB_DATABASE: 'checkout',
+				DATABASE_URL: 'postgresql://docker:docker@127.0.0.1:5433/checkout',
 				USERS_SERVICE_URL: USERS_URL,
 				PRODUCTS_SERVICE_URL: PRODUCTS_URL,
 				// No broker is required: publishing a payment order is best-effort.

@@ -3,6 +3,7 @@ import type { INestApplication } from '@nestjs/common'
 import { Test } from '@nestjs/testing'
 import { getRepositoryToken } from '@nestjs/typeorm'
 import { DataSource, type Repository } from 'typeorm'
+import type { PostgresDriver } from 'typeorm/driver/postgres/PostgresDriver'
 import { AppModule } from '../src/app.module'
 import { CartItem } from '../src/cart/entities/cart-item.entity'
 import { Cart, CartStatus } from '../src/cart/entities/cart.entity'
@@ -52,7 +53,7 @@ describe('Checkout domain entities (e2e)', () => {
 	it('connects to the checkout PostgreSQL database', () => {
 		expect(dataSource.isInitialized).toBe(true)
 		expect(dataSource.options.type).toBe('postgres')
-		expect(dataSource.options.database).toBe('checkout')
+		expect((dataSource.driver as PostgresDriver).database).toBe('checkout')
 	})
 
 	it('maps Cart exactly, including its eager cascade relation', () => {

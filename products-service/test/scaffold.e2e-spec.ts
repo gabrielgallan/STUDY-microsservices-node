@@ -4,6 +4,7 @@ import { Test } from '@nestjs/testing'
 import { getRepositoryToken } from '@nestjs/typeorm'
 import request from 'supertest'
 import { DataSource, type Repository } from 'typeorm'
+import type { PostgresDriver } from 'typeorm/driver/postgres/PostgresDriver'
 import { AppModule } from '../src/app.module'
 import { envSchema } from '../src/env/env'
 import { Product } from '../src/products/entities/product.entity'
@@ -37,7 +38,7 @@ describe('Products service scaffold (e2e)', () => {
 	it('connects to the products database', () => {
 		expect(dataSource.isInitialized).toBe(true)
 		expect(dataSource.options.type).toBe('postgres')
-		expect(dataSource.options.database).toBe('products')
+		expect((dataSource.driver as PostgresDriver).database).toBe('products')
 	})
 
 	it('does not expose HTTP endpoints', async () => {
@@ -113,11 +114,7 @@ describe('Environment schema', () => {
 		expect(envSchema.parse({ JWT_SECRET: 'products-service-e2e-secret' })).toEqual({
 			NODE_ENV: 'production',
 			PORT: 3002,
-			DB_HOST: 'localhost',
-			DB_PORT: 5436,
-			DB_USERNAME: 'docker',
-			DB_PASSWORD: 'docker',
-			DB_DATABASE: 'products',
+			DATABASE_URL: 'postgresql://docker:docker@localhost:5436/products',
 			JWT_SECRET: 'products-service-e2e-secret',
 		})
 	})
@@ -127,21 +124,15 @@ describe('Environment schema', () => {
 			envSchema.parse({
 				NODE_ENV: 'development',
 				PORT: '3102',
-				DB_HOST: 'database',
-				DB_PORT: '6436',
-				DB_USERNAME: 'products-user',
-				DB_PASSWORD: 'products-password',
-				DB_DATABASE: 'products-development',
+				DATABASE_URL:
+					'postgresql://products-user:products-password@database:6436/products-development',
 				JWT_SECRET: 'products-service-development-secret',
 			}),
 		).toEqual({
 			NODE_ENV: 'development',
 			PORT: 3102,
-			DB_HOST: 'database',
-			DB_PORT: 6436,
-			DB_USERNAME: 'products-user',
-			DB_PASSWORD: 'products-password',
-			DB_DATABASE: 'products-development',
+			DATABASE_URL:
+				'postgresql://products-user:products-password@database:6436/products-development',
 			JWT_SECRET: 'products-service-development-secret',
 		})
 	})
@@ -155,12 +146,8 @@ describe('Environment schema', () => {
 		['PORT', '0'],
 		['PORT', '65536'],
 		['PORT', 'invalid'],
-		['DB_PORT', '0'],
-		['DB_PORT', '65536'],
-		['DB_HOST', '  '],
-		['DB_USERNAME', '  '],
-		['DB_PASSWORD', '  '],
-		['DB_DATABASE', '  '],
+		['DATABASE_URL', 'not-a-url'],
+		['DATABASE_URL', '  '],
 		['JWT_SECRET', '  '],
 	])('rejects an invalid %s value', (key, value) => {
 		expect(
