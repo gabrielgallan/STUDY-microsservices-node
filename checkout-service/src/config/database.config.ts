@@ -5,6 +5,6 @@ export const databaseConfig: TypeOrmModuleOptions = {
 	type: 'postgres',
 	url: env.DATABASE_URL,
 	entities: [`${__dirname}/../**/*.entity{.ts,.js}`],
-	synchronize: env.NODE_ENV !== 'production',
+	synchronize: true,
 	logging: env.NODE_ENV === 'development',
 }
