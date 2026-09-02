@@ -8,7 +8,7 @@ export const databaseConfig: TypeOrmModuleOptions = {
 
 	synchronize: false,
 	entities: [`${__dirname}/../**/*.entity{.ts,.js}`],
-	migrations: [`${__dirname}/../migrations/*.{js,ts}`],
+	migrations: [`${__dirname}/migrations/*.{js,ts}`],
 
 	migrationsRun: true,
 	migrationsTableName: 'migrations',

@@ -10,7 +10,11 @@
 		"start:debug": "nest start --debug --watch",
 		"start:prod": "node dist/src/main",
 		"test": "pnpm run test:e2e",
-		"test:e2e": "jest --config ./test/jest-e2e.json --runInBand"
+		"test:e2e": "jest --config ./test/jest-e2e.json --runInBand",
+		"typeorm": "node -r ts-node/register ./node_modules/typeorm/cli.js",
+		"migration:generate": "pnpm typeorm migration:generate",
+		"migration:run": "pnpm typeorm migration:run -d ./src/db/data-source.ts",
+		"migration:revert": "pnpm typeorm migration:revert -d ./src/db/data-source.ts"
 	},
 	"dependencies": {
 		"@nestjs/common": "11.0.1",
