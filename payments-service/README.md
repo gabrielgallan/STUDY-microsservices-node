@@ -1,5 +1,7 @@
 # Description
 
+Microservice responsible for processing e-commerce payments. Integrates with payment gateways and manages transactions, confirmations, refunds, and the financial status of placed orders.
+
 # Running locally
 
 1. Enter the directory

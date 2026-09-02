@@ -1,5 +1,7 @@
 # Description
 
+Microservice responsible for the e-commerce product catalog. Handles product registration, listing products by seller, categorization, and inventory management, providing the data needed for catalog display and integration with the other services.
+
 # Running locally
 
 1. Enter the directory
